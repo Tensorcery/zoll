@@ -1,0 +1,20 @@
+[tool.commitizen]
+name = "cz_conventional_commits"
+# The version is the workspace's in Cargo.toml; a bump rewrites it and
+# Cargo.lock, and the wheel takes it from there.
+version_provider = "cargo"
+version_scheme = "semver"
+tag_format = "v$version"
+annotated_tag = true
+update_changelog_on_bump = true
+changelog_incremental = true
+# Before 1.0 a breaking change raises the minor version.
+major_version_zero = true
+message_length_limit = 72
+body_length_limit = 100
+
+[tool.commitizen.change_type_map]
+feat = "Features"
+fix = "Fixes"
+refactor = "Refactoring"
+perf = "Performance"

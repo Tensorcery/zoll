@@ -1,0 +1,14 @@
+extends: default
+
+ignore: |
+  .venv/
+  target/
+
+rules:
+  # The comment says why; a separator line does not need saying.
+  document-start: disable
+  line-length:
+    max: 120
+  # GitHub's `on:` is a key, not a boolean.
+  truthy:
+    check-keys: false

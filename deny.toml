@@ -1,0 +1,25 @@
+# cargo deny check: what a dependency may be before it enters Cargo.lock.
+
+[graph]
+all-features = true
+
+# A RustSec advisory or a yanked version fails the check.
+[advisories]
+yanked = "deny"
+
+# Only permissive licenses: zoll is MIT and stays usable anywhere.
+[licenses]
+allow = ["MIT", "Apache-2.0", "Unicode-3.0", "BSD-3-Clause", "ISC", "Zlib"]
+confidence-threshold = 0.9
+# The list is what zoll accepts, not what it uses today.
+unused-allowed-license = "allow"
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+# crates.io only: no git dependency slips in unnoticed.
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

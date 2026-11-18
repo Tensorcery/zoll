@@ -1,0 +1,19 @@
+[package]
+name = "zoll"
+description = "Finds code hidden inside other code and data, and judges it by Rego policies"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+clap.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+insta-cmd.workspace = true

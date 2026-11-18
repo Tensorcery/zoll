@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli.rs
+info:
+  program: zoll
+  args:
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Finds code hidden inside other code and data - awk in a shell string, shell in a YAML `run:` - and judges it by Rego policies
+
+Usage: zoll
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+
+----- stderr -----

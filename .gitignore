@@ -1,0 +1,6 @@
+/target/
+/dist/
+.venv/
+# insta's snapshots waiting for review
+*.snap.new
+*.pending-snap

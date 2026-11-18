@@ -1,0 +1,78 @@
+minimum_pre_commit_version: "3.2.0"
+default_install_hook_types: [pre-commit, pre-push, commit-msg]
+# A hook without `stages` runs at the commit and nowhere else. Left to
+# pre-commit's own default it runs at every installed stage - the file hooks a
+# second time on the message and a third on the push.
+default_stages: [pre-commit]
+
+exclude: ^(\.venv|target)/
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # The Rego policies: Regal, built from source by pre-commit's own Go.
+  - repo: https://github.com/open-policy-agent/regal
+    rev: v0.43.0
+    hooks:
+      - id: regal-lint
+
+  - repo: local
+    hooks:
+      # `cargo fmt` rewrites the files in place; pre-commit then refuses the
+      # commit because they changed, and the next `git add` takes the fix.
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --all --
+        language: system
+        types: [rust]
+
+      # Any copy across the repository fails it (.jscpd.json). pre-commit
+      # brings its own node.
+      - id: jscpd
+        name: jscpd
+        entry: jscpd .
+        language: node
+        additional_dependencies: [jscpd@5.4.3]
+        pass_filenames: false
+        always_run: true
+
+      # The message being written, judged by cz.toml.
+      - id: commit-message
+        name: the commit message follows the convention
+        entry: env -u VIRTUAL_ENV uv run cz check --commit-msg-file
+        language: system
+        stages: [commit-msg]
+
+      # The whole lint and the tests, so a red CI run is found here rather
+      # than on GitHub.
+      - id: make-lint
+        name: make lint
+        entry: make lint
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: make-test
+        name: make test
+        entry: make test
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

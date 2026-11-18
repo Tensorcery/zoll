@@ -1,0 +1,41 @@
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.100"
+license = "MIT"
+repository = "https://github.com/Tensorcery/zoll"
+authors = ["Tensorcery"]
+
+# Versions live here once; a crate names a dependency with `workspace = true`.
+[workspace.dependencies]
+clap = { version = "4.6.8", features = ["derive"] }
+insta = "1.49.0"
+insta-cmd = "0.7.0"
+
+# Every crate takes these with `[lints] workspace = true`.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+# A failure is a value the caller handles, never a crash.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+# Output goes through the writer the CLI hands down, so tests can read it.
+print_stdout = "deny"
+print_stderr = "deny"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
