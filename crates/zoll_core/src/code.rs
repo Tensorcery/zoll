@@ -259,10 +259,10 @@ impl Builder<'_> {
             "end".to_owned(),
             self.position(node.end_position(), node.end_byte()),
         );
-        if fields.is_empty() && children.is_empty() {
-            let text = self.text.get(node.byte_range()).unwrap_or_default();
-            object.insert("text".to_owned(), text.into());
-        }
+        // Every node, not the leaves only: a policy reads a node's text
+        // without knowing how its grammar nests it.
+        let text = self.text.get(node.byte_range()).unwrap_or_default();
+        object.insert("text".to_owned(), text.into());
         if !fields.is_empty() {
             object.insert("fields".to_owned(), Value::Object(fields));
         }
