@@ -1,0 +1,42 @@
+---
+source: crates/zoll/tests/cli/code.rs
+info:
+  program: zoll
+  args:
+    - languages
+---
+success: true
+exit_code: 0
+----- stdout -----
+awk
+bash
+c
+c_sharp
+cpp
+css
+dockerfile
+go
+groovy
+hcl
+html
+java
+javascript
+jq
+json
+kotlin
+make
+markdown
+php
+powershell
+python
+ruby
+rust
+sql
+swift
+toml
+tsx
+typescript
+xml
+yaml
+
+----- stderr -----

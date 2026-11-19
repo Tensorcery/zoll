@@ -1,5 +1,6 @@
 //! The command as a user runs it: the binary, its arguments, its output.
 
+mod code;
 mod commands;
 mod config;
 mod corpus;

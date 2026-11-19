@@ -1,0 +1,96 @@
+---
+source: crates/zoll/tests/cli/code.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - run.sh
+---
+success: true
+exit_code: 0
+----- stdout -----
+[
+  {
+    "input": {
+      "children": [
+        {
+          "end": {
+            "column": 8,
+            "line": 1
+          },
+          "fields": {
+            "argument": [
+              {
+                "end": {
+                  "column": 8,
+                  "line": 1
+                },
+                "start": {
+                  "column": 6,
+                  "line": 1
+                },
+                "text": "hi",
+                "type": "word"
+              }
+            ],
+            "name": {
+              "children": [
+                {
+                  "end": {
+                    "column": 5,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 1,
+                    "line": 1
+                  },
+                  "text": "echo",
+                  "type": "word"
+                }
+              ],
+              "end": {
+                "column": 5,
+                "line": 1
+              },
+              "start": {
+                "column": 1,
+                "line": 1
+              },
+              "type": "command_name"
+            }
+          },
+          "start": {
+            "column": 1,
+            "line": 1
+          },
+          "type": "command"
+        }
+      ],
+      "end": {
+        "column": 1,
+        "line": 2
+      },
+      "start": {
+        "column": 1,
+        "line": 1
+      },
+      "type": "program"
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "run.sh"
+        }
+      },
+      "zoll": {
+        "file": {
+          "language": "bash",
+          "path": "run.sh"
+        }
+      }
+    }
+  }
+]
+
+----- stderr -----

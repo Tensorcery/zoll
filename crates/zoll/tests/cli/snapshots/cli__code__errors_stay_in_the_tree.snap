@@ -1,0 +1,95 @@
+---
+source: crates/zoll/tests/cli/code.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - bad.sh
+---
+success: true
+exit_code: 0
+----- stdout -----
+[
+  {
+    "input": {
+      "children": [
+        {
+          "children": [
+            {
+              "end": {
+                "column": 8,
+                "line": 1
+              },
+              "fields": {
+                "name": {
+                  "children": [
+                    {
+                      "end": {
+                        "column": 8,
+                        "line": 1
+                      },
+                      "start": {
+                        "column": 4,
+                        "line": 1
+                      },
+                      "text": "then",
+                      "type": "word"
+                    }
+                  ],
+                  "end": {
+                    "column": 8,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 4,
+                    "line": 1
+                  },
+                  "type": "command_name"
+                }
+              },
+              "start": {
+                "column": 4,
+                "line": 1
+              },
+              "type": "command"
+            }
+          ],
+          "end": {
+            "column": 1,
+            "line": 2
+          },
+          "start": {
+            "column": 1,
+            "line": 1
+          },
+          "type": "ERROR"
+        }
+      ],
+      "end": {
+        "column": 1,
+        "line": 2
+      },
+      "start": {
+        "column": 1,
+        "line": 1
+      },
+      "type": "program"
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "bad.sh"
+        }
+      },
+      "zoll": {
+        "file": {
+          "language": "bash",
+          "path": "bad.sh"
+        }
+      }
+    }
+  }
+]
+
+----- stderr -----

@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/code.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[python.eval]: eval runs a string
+ --> a.py:2:5
+  |
+2 | y = eval(input())
+  |     ^^^^^^^^^^^^^
+
+1 violation
+
+----- stderr -----

@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/code.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: true
+exit_code: 0
+----- stdout -----
+warning[zoll.parse]: does not parse as python: the tree is nested deeper than 512
+ --> a.py:1:1
+  |
+1 | x = (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((...
+  | ^
+
+1 warning
+
+----- stderr -----

@@ -1,0 +1,147 @@
+---
+source: crates/zoll/tests/cli/code.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - run.sh
+---
+success: true
+exit_code: 0
+----- stdout -----
+[
+  {
+    "input": {
+      "children": [
+        {
+          "children": [
+            {
+              "end": {
+                "column": 3,
+                "line": 1
+              },
+              "fields": {
+                "name": {
+                  "children": [
+                    {
+                      "end": {
+                        "column": 3,
+                        "line": 1
+                      },
+                      "start": {
+                        "column": 1,
+                        "line": 1
+                      },
+                      "text": "ls",
+                      "type": "word"
+                    }
+                  ],
+                  "end": {
+                    "column": 3,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 1,
+                    "line": 1
+                  },
+                  "type": "command_name"
+                }
+              },
+              "start": {
+                "column": 1,
+                "line": 1
+              },
+              "type": "command"
+            },
+            {
+              "end": {
+                "column": 22,
+                "line": 1
+              },
+              "fields": {
+                "argument": [
+                  {
+                    "end": {
+                      "column": 22,
+                      "line": 1
+                    },
+                    "start": {
+                      "column": 10,
+                      "line": 1
+                    },
+                    "text": "'{print $1}'",
+                    "type": "raw_string"
+                  }
+                ],
+                "name": {
+                  "children": [
+                    {
+                      "end": {
+                        "column": 9,
+                        "line": 1
+                      },
+                      "start": {
+                        "column": 6,
+                        "line": 1
+                      },
+                      "text": "awk",
+                      "type": "word"
+                    }
+                  ],
+                  "end": {
+                    "column": 9,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 6,
+                    "line": 1
+                  },
+                  "type": "command_name"
+                }
+              },
+              "start": {
+                "column": 6,
+                "line": 1
+              },
+              "type": "command"
+            }
+          ],
+          "end": {
+            "column": 22,
+            "line": 1
+          },
+          "start": {
+            "column": 1,
+            "line": 1
+          },
+          "type": "pipeline"
+        }
+      ],
+      "end": {
+        "column": 1,
+        "line": 2
+      },
+      "start": {
+        "column": 1,
+        "line": 1
+      },
+      "type": "program"
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "run.sh"
+        }
+      },
+      "zoll": {
+        "file": {
+          "language": "bash",
+          "path": "run.sh"
+        }
+      }
+    }
+  }
+]
+
+----- stderr -----

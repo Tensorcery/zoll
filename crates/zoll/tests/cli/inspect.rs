@@ -161,14 +161,6 @@ fn toml_error() -> TestResult {
 }
 
 #[test]
-fn code_not_built() -> TestResult {
-    let repo = Repo::new(&[("run.sh", "echo hi\n")])?;
-    repo.settings()?
-        .bind(|| assert_cmd_snapshot!(inspect(&repo, "run.sh")));
-    Ok(())
-}
-
-#[test]
 fn no_language() -> TestResult {
     let repo = Repo::new(&[("notes.txt", "hi\n")])?;
     repo.settings()?

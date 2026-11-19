@@ -1,0 +1,181 @@
+---
+source: crates/zoll/tests/cli/code.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - a.py
+---
+success: true
+exit_code: 0
+----- stdout -----
+[
+  {
+    "input": {
+      "children": [
+        {
+          "children": [
+            {
+              "end": {
+                "column": 9,
+                "line": 1
+              },
+              "fields": {
+                "left": {
+                  "end": {
+                    "column": 2,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 1,
+                    "line": 1
+                  },
+                  "text": "s",
+                  "type": "identifier"
+                },
+                "right": {
+                  "children": [
+                    {
+                      "end": {
+                        "column": 6,
+                        "line": 1
+                      },
+                      "start": {
+                        "column": 5,
+                        "line": 1
+                      },
+                      "text": "\"",
+                      "type": "string_start"
+                    },
+                    {
+                      "end": {
+                        "column": 8,
+                        "line": 1
+                      },
+                      "start": {
+                        "column": 6,
+                        "line": 1
+                      },
+                      "text": "ёж",
+                      "type": "string_content"
+                    },
+                    {
+                      "end": {
+                        "column": 9,
+                        "line": 1
+                      },
+                      "start": {
+                        "column": 8,
+                        "line": 1
+                      },
+                      "text": "\"",
+                      "type": "string_end"
+                    }
+                  ],
+                  "end": {
+                    "column": 9,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 5,
+                    "line": 1
+                  },
+                  "type": "string"
+                }
+              },
+              "start": {
+                "column": 1,
+                "line": 1
+              },
+              "type": "assignment"
+            }
+          ],
+          "end": {
+            "column": 9,
+            "line": 1
+          },
+          "start": {
+            "column": 1,
+            "line": 1
+          },
+          "type": "expression_statement"
+        },
+        {
+          "children": [
+            {
+              "end": {
+                "column": 16,
+                "line": 1
+              },
+              "fields": {
+                "left": {
+                  "end": {
+                    "column": 12,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 11,
+                    "line": 1
+                  },
+                  "text": "n",
+                  "type": "identifier"
+                },
+                "right": {
+                  "end": {
+                    "column": 16,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 15,
+                    "line": 1
+                  },
+                  "text": "1",
+                  "type": "integer"
+                }
+              },
+              "start": {
+                "column": 11,
+                "line": 1
+              },
+              "type": "assignment"
+            }
+          ],
+          "end": {
+            "column": 16,
+            "line": 1
+          },
+          "start": {
+            "column": 11,
+            "line": 1
+          },
+          "type": "expression_statement"
+        }
+      ],
+      "end": {
+        "column": 1,
+        "line": 2
+      },
+      "start": {
+        "column": 1,
+        "line": 1
+      },
+      "type": "module"
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "a.py"
+        }
+      },
+      "zoll": {
+        "file": {
+          "language": "python",
+          "path": "a.py"
+        }
+      }
+    }
+  }
+]
+
+----- stderr -----
