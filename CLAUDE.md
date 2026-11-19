@@ -36,6 +36,7 @@ language → every violation mapped back to `file:line:col` of the real file.
 | `crates/*/tests/` | tests; `snapshots/` next to them is insta's expected output |
 | `pyproject.toml` | the PyPI wheel (maturin) and the Python tools of this repository |
 | `docs/design.md` | the decisions, and the public input model (section 8) |
+| `docs/plan.md` | the stages of v1 and their checkpoints; a ticked box is done |
 | `docs/langs/ru/` | the Russian README |
 
 Extending zoll is meant to be data more than Rust: an embedding is a query,
