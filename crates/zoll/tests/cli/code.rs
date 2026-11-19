@@ -101,17 +101,32 @@ fn a_policy_on_python() -> TestResult {
     Ok(())
 }
 
-#[test]
-fn a_tree_too_deep_is_a_warning() -> TestResult {
-    // Walked deeper, the tree would overflow the stack: zoll refuses it.
-    let deep = format!("x = {}1{}\n", "(".repeat(600), ")".repeat(600));
-    let repo = Repo::new(&[
+/// A Python file of `lines` lines, each `x = (((1)))` nested `depth` deep,
+/// with a Python policy to check it.
+fn nested(depth: usize, lines: usize) -> Result<Repo, Box<dyn std::error::Error>> {
+    let line = format!("x = {}1{}\n", "(".repeat(depth), ")".repeat(depth));
+    Repo::new(&[
         (
             "policy/python.rego",
             "package python\n\ndeny_x contains \"x\" if false\n",
         ),
-        ("a.py", &deep),
-    ])?;
+        ("a.py", &line.repeat(lines)),
+    ])
+}
+
+#[test]
+fn a_tree_too_deep_is_a_warning() -> TestResult {
+    // Walked deeper, the tree would overflow the stack: zoll refuses it.
+    let repo = nested(600, 1)?;
+    assert_cmd_snapshot!(repo.zoll("").arg("check"));
+    Ok(())
+}
+
+#[test]
+fn a_tree_with_too_much_text_is_a_warning() -> TestResult {
+    // Each node repeats the text under it: lines of 400 nested parentheses
+    // would copy the file hundreds of times over. zoll refuses it.
+    let repo = nested(400, 20)?;
     assert_cmd_snapshot!(repo.zoll("").arg("check"));
     Ok(())
 }
