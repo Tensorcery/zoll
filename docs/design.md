@@ -214,9 +214,14 @@ then.
 `input` is the tree-sitter tree as nested JSON:
 
 - named nodes only (punctuation and anonymous nodes are left out);
-- each node: `type`, `start` and `end` (`{line, column}`, 1-based), `fields`
-  for children reached by a field name, `children` for the others;
-- `text` on leaf nodes only;
+- each node: `type`, `text`, `start` and `end` (`{line, column}`,
+  1-based), `fields` for children reached by a field name, `children` for
+  the others;
+- `text` is on every node, not the leaves only: a policy reads
+  `cmd.fields.name.text` without knowing that bash's `command_name` holds a
+  `word`. The text of every node adds 6 to 11 times the file's size; the
+  tree without it, as `zoll inspect` prints it, is already 120 to 190 times
+  the file (measured at stage 4);
 - a field that may hold several nodes (`multiple` in the grammar's
   `node-types.json`) is always a list, even with one node, so a policy reads
   it the same way in every file; any other field is an object;
@@ -228,14 +233,15 @@ then.
   warning.
 
 ```json
-{"type": "program", "start": {"line": 1, "column": 1}, "end": {"line": 1, "column": 22},
+{"type": "program", "text": "ls | awk '{print $1}'\n",
+ "start": {"line": 1, "column": 1}, "end": {"line": 2, "column": 1},
  "children": [
-  {"type": "pipeline", "start": {...}, "end": {...}, "children": [
-    {"type": "command", "start": {...}, "end": {...},
-     "fields": {"name": {"type": "command_name", "start": {...}, "end": {...},
+  {"type": "pipeline", "text": "ls | awk '{print $1}'", "start": {...}, "end": {...}, "children": [
+    {"type": "command", "text": "ls", "start": {...}, "end": {...},
+     "fields": {"name": {"type": "command_name", "text": "ls", "start": {...}, "end": {...},
                          "children": [{"type": "word", "text": "ls", "start": {...}, "end": {...}}]}}},
-    {"type": "command", "start": {...}, "end": {...},
-     "fields": {"name": {"type": "command_name", "start": {...}, "end": {...},
+    {"type": "command", "text": "awk '{print $1}'", "start": {...}, "end": {...},
+     "fields": {"name": {"type": "command_name", "text": "awk", "start": {...}, "end": {...},
                          "children": [{"type": "word", "text": "awk", "start": {...}, "end": {...}}]},
                 "argument": [{"type": "raw_string", "text": "'{print $1}'", "start": {...}, "end": {...}}]}}]}]}
 ```

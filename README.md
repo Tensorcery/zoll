@@ -46,7 +46,7 @@ deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
 	node.type == "pipeline"
 	some cmd in node.children
 	cmd.type == "command"
-	cmd.fields.name.children[0].text == "curl"
+	cmd.fields.name.text == "curl"
 }
 ```
 

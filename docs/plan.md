@@ -83,7 +83,8 @@ puts it at its line, and conftest still takes that policy.
       features, the default feature set = the base set (their own crates,
       awk and jq vendored: section 15, item 6)
 - [x] a code file becomes the tree of section 8.2: named nodes, `fields` and
-      `children`, `text` on leaves, `start`/`end` in every node
+      `children`, `text` and `start`/`end` in every node (`text` on every
+      node, not the leaves only: section 8.2)
 - [x] columns are 1-based Unicode code points
 - [x] `at` as a node resolves to its position
 - [x] ERROR nodes stay in the tree, typed `ERROR`
