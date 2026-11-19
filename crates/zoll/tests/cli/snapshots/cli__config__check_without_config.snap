@@ -4,9 +4,11 @@ info:
   program: zoll
   args:
     - check
+    - "--show-files"
 ---
 success: true
 exit_code: 0
 ----- stdout -----
+yaml       a.yml
 
 ----- stderr -----

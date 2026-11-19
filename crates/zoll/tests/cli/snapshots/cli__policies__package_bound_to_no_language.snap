@@ -1,0 +1,13 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: the config binds package `main` to `yml`, which is no language zoll knows; `zoll languages` lists them

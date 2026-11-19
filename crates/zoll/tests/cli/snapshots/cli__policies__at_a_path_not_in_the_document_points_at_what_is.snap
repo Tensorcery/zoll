@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[yaml]: no timeout
+ --> ci.yml:4:3
+  |
+4 |   build:
+  |   ^^^^^
+
+1 violation
+
+----- stderr -----

@@ -21,20 +21,27 @@ main = "yaml"
 "scripts/legacy/**" = ["bash.curl_pipe"]
 "#;
 
+// A valid config is read whole; `--show-files` stops there, before the
+// policies would load.
+
 #[test]
 fn check_without_config() -> TestResult {
-    let repo = Repo::new(&[])?;
-    assert_cmd_snapshot!(repo.zoll("").arg("check"));
+    let repo = Repo::new(&[("a.yml", "")])?;
+    assert_cmd_snapshot!(repo.zoll("").args(["check", "--show-files"]));
     Ok(())
 }
 
 #[test]
 fn check_every_field() -> TestResult {
-    let repo = Repo::new(&[("zoll.toml", VALID)])?;
-    assert_cmd_snapshot!(
-        repo.zoll("")
-            .args(["check", "src", "--format", "json", "--locked"])
-    );
+    let repo = Repo::new(&[("zoll.toml", VALID), ("src/a.yml", "")])?;
+    assert_cmd_snapshot!(repo.zoll("").args([
+        "check",
+        "src",
+        "--format",
+        "json",
+        "--locked",
+        "--show-files"
+    ]));
     Ok(())
 }
 
@@ -45,7 +52,7 @@ fn check_pyproject_every_field() -> TestResult {
         VALID.replace("\n[", "\n[tool.zoll.")
     );
     let repo = Repo::new(&[("pyproject.toml", &pyproject)])?;
-    assert_cmd_snapshot!(repo.zoll("").arg("check"));
+    assert_cmd_snapshot!(repo.zoll("").args(["check", "--show-files"]));
     Ok(())
 }
 

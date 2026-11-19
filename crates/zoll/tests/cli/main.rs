@@ -5,6 +5,7 @@ mod config;
 mod corpus;
 mod files;
 mod inspect;
+mod policies;
 
 use insta_cmd::get_cargo_bin;
 use std::error::Error;

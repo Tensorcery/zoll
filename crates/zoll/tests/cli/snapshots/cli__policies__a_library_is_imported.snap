@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[yaml]: QUIET
+ --> a.yml:1:1
+  |
+1 | a: quiet
+  | ^
+
+1 violation
+
+----- stderr -----

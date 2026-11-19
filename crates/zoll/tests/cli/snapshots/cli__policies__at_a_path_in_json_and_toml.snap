@@ -1,0 +1,25 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[toml.lto]: no lto
+ --> Cargo.toml:5:1
+  |
+5 | lto = false
+  | ^^^
+
+error[json.private]: published
+ --> package.json:3:3
+  |
+3 |   "private": false
+  |   ^^^^^^^^^
+
+2 violations
+
+----- stderr -----

@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[yaml]: no workflow may run curl
+ --> ci.yml:1:1
+  |
+1 | name: CI
+  | ^
+
+1 violation
+
+----- stderr -----

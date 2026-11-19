@@ -1,0 +1,17 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: expecting expression
+ --> policy/bad.rego:3:24
+  |
+3 | deny contains "x" if {
+  |                       ^

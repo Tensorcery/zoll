@@ -8,10 +8,11 @@ info:
     - "--format"
     - json
     - "--locked"
+    - "--show-files"
 ---
-success: false
-exit_code: 2
+success: true
+exit_code: 0
 ----- stdout -----
+yaml       src/a.yml
 
 ----- stderr -----
-error: src: No such file or directory (os error 2)

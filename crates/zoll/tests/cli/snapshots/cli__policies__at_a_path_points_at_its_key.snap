@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[yaml.curl_pipe]: curl piped into a shell
+ --> ci.yml:7:9
+  |
+7 |       - run: |
+  |         ^^^
+
+1 violation
+
+----- stderr -----

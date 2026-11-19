@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[yaml]: here
+ --> ci.yml:7:1
+  |
+7 |       - run: |
+  | ^
+
+1 violation
+
+----- stderr -----

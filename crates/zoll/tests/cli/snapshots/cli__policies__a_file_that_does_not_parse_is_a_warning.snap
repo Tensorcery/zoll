@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: true
+exit_code: 0
+----- stdout -----
+warning[zoll.parse]: does not parse as yaml: a list or a mapping as a key has no place in a JSON object
+ --> templates/deploy.yaml:2:10
+  |
+2 |   name: {{ .Release.Name }}
+  |          ^
+
+1 warning
+
+----- stderr -----

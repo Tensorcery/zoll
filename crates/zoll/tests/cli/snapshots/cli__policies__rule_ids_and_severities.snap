@@ -1,0 +1,43 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[yaml]: bare
+ --> a.yml:1:1
+  |
+1 | a: 1
+  | ^
+
+warning[yaml]: bare warn
+ --> a.yml:1:1
+  |
+1 | a: 1
+  | ^
+
+error[yaml.curl_pipe]: deny
+ --> a.yml:1:1
+  |
+1 | a: 1
+  | ^
+
+warning[yaml.style]: warn
+ --> a.yml:1:1
+  |
+1 | a: 1
+  | ^
+
+error[yaml.two_words]: violation
+ --> a.yml:1:1
+  |
+1 | a: 1
+  | ^
+
+3 violations, 2 warnings
+
+----- stderr -----

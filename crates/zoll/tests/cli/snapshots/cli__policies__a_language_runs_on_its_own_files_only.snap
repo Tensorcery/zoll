@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[json]: json only
+ --> b.json:1:1
+  |
+1 | {}
+  | ^
+
+1 violation
+
+----- stderr -----
