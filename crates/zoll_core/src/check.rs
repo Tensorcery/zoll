@@ -4,9 +4,10 @@
 use rayon::prelude::*;
 
 use crate::document::{self, Place};
-use crate::error::Error;
+use crate::error::{Error, line_column_span};
 use crate::input;
-use crate::policy::{Policies, Severity, Violation};
+use crate::language;
+use crate::policy::{At, Policies, Severity, Violation};
 use crate::walk::File;
 
 /// A file with what was found in it.
@@ -49,8 +50,8 @@ pub fn check(files: Vec<File>, policies: &Policies) -> Result<Vec<Checked>, Erro
 }
 
 fn check_file(file: File, policies: &Policies) -> Result<Option<Checked>, Error> {
-    if !matches!(file.language, "yaml" | "json" | "toml") {
-        // Code is parsed from stage 4 of docs/plan.md on.
+    if !language::compiled(file.language) {
+        // A language this zoll was built without: nothing to check it with.
         return Ok(None);
     }
     let text = input::read(&file)?;
@@ -60,8 +61,12 @@ fn check_file(file: File, policies: &Policies) -> Result<Option<Checked>, Error>
             for evaluation in &evaluations {
                 for violation in policies.check(file.language, evaluation)? {
                     let place = match (&violation.at, violation.line) {
-                        (Some(at), _) => {
-                            document::locate(file.language, &text, evaluation.origin, at)
+                        (Some(At::Path(path)), _) => {
+                            document::locate(file.language, &text, evaluation.origin, path)
+                        }
+                        (Some(At::Node { start, end }), _) => {
+                            let byte = |(line, column)| line_column_span(&text, line, column).start;
+                            Place::of(&text, byte(*start)..byte(*end))
                         }
                         (None, Some(line)) => line_start(&text, line),
                         (None, None) => {

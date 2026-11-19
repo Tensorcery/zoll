@@ -11,7 +11,7 @@ use anstyle::{AnsiColor, Effects};
 use clap::builder::Styles;
 use clap::{ColorChoice, Parser, Subcommand, ValueEnum};
 use zoll_core::config::FailOn;
-use zoll_core::language::{LANGUAGES, Languages};
+use zoll_core::language::{self, LANGUAGES, Languages};
 use zoll_core::policy::Policies;
 use zoll_core::{Error, SourceError, check, config, input, walk};
 
@@ -193,7 +193,7 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
             return Ok(false);
         }
         Command::Languages => {
-            for language in LANGUAGES {
+            for language in LANGUAGES.into_iter().filter(|l| language::compiled(l)) {
                 writeln!(out, "{language}").map_err(stdout)?;
             }
             return Ok(false);

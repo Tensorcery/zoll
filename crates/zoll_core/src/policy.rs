@@ -33,12 +33,49 @@ pub struct Violation {
     pub severity: Severity,
     /// The message.
     pub message: String,
-    /// The path the result points at, when it names one.
-    pub at: Option<Vec<Step>>,
+    /// What the result points at, when it names something.
+    pub at: Option<At>,
     /// The line conftest's `_loc` names, when it does and `at` does not.
     pub line: Option<usize>,
     /// The result's other keys, as conftest keeps them.
     pub metadata: Map<String, Value>,
+}
+
+/// What a result's `at` points at (docs/design.md, section 8.5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum At {
+    /// A path in a data document.
+    Path(Vec<Step>),
+    /// A node of a code tree: its `start` and `end`, each a line and a
+    /// column, both from 1.
+    Node {
+        /// Where it starts.
+        start: (usize, usize),
+        /// Where it ends, past its last character.
+        end: (usize, usize),
+    },
+}
+
+impl At {
+    fn from_json(value: &Value) -> Option<Self> {
+        let position = |key| {
+            let place = value.get(key)?;
+            let number = |key| usize::try_from(place.get(key)?.as_u64()?).ok();
+            Some((number("line")?, number("column")?))
+        };
+        match value {
+            Value::Array(steps) => steps
+                .iter()
+                .map(Step::from_json)
+                .collect::<Option<_>>()
+                .map(Self::Path),
+            Value::Object(_) => Some(Self::Node {
+                start: position("start")?,
+                end: position("end")?,
+            }),
+            _ => None,
+        }
+    }
 }
 
 /// The policies of a run, compiled once.
@@ -403,10 +440,13 @@ fn violation(
         )));
     };
     let at = match metadata.remove("at") {
-        Some(Value::Array(steps)) => steps.iter().map(Step::from_json).collect(),
-        Some(other) => {
-            metadata.insert("at".to_owned(), other);
-            None
+        Some(value) => {
+            let at = At::from_json(&value);
+            if at.is_none() {
+                // Not a path, not a node: the result's own key, kept.
+                metadata.insert("at".to_owned(), value);
+            }
+            at
         }
         None => None,
     };

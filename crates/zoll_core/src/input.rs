@@ -6,8 +6,9 @@ use std::path::Path;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use crate::document::{self, Origin};
-use crate::error::Error;
+use crate::code;
+use crate::document::{self, Document, Origin};
+use crate::error::{Error, SourceError};
 use crate::walk::File;
 
 /// One evaluation of the policies: a document and what is known of it.
@@ -39,13 +40,14 @@ pub fn read(file: &File) -> Result<String, Error> {
 ///
 /// # Errors
 ///
-/// The text does not parse, or is code, which zoll does not parse yet.
+/// The text does not parse, or is of a language zoll was built without.
 pub fn evaluations(file: &File, text: &str) -> Result<Vec<Evaluation>, Error> {
-    let Some(documents) = document::documents(file.language, &file.path, text)? else {
-        return Err(Error::Other(format!(
-            "{}: parsing {} is not built yet; zoll reads YAML, JSON and TOML",
-            file.relative, file.language
-        )));
+    let documents = match document::documents(file.language, &file.path, text)? {
+        Some(documents) => documents,
+        None => vec![Document {
+            value: tree(file, text)?,
+            origin: Origin::default(),
+        }],
     };
     let data = data(file);
     Ok(documents
@@ -56,6 +58,24 @@ pub fn evaluations(file: &File, text: &str) -> Result<Vec<Evaluation>, Error> {
             origin: document.origin,
         })
         .collect())
+}
+
+/// The tree of a code file (section 8.2).
+fn tree(file: &File, text: &str) -> Result<Value, Error> {
+    let Some(tree) = code::tree(file.language, text) else {
+        return Err(Error::Other(format!(
+            "{}: this zoll was built without {}; `zoll languages` lists what it parses",
+            file.relative, file.language
+        )));
+    };
+    tree.map_err(|message| {
+        Error::Source(SourceError {
+            path: file.path.clone(),
+            text: text.to_owned(),
+            message,
+            span: None,
+        })
+    })
 }
 
 fn data(file: &File) -> Value {

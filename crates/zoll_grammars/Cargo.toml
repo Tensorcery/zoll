@@ -1,0 +1,34 @@
+[package]
+name = "zoll_grammars"
+description = "The tree-sitter grammars zoll vendors: those with no crate under a permissive license"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MIT AND BSD-3-Clause"
+repository.workspace = true
+authors.workspace = true
+publish = false
+include = ["build.rs", "src/", "vendor/"]
+
+[features]
+awk = []
+jq = []
+
+[dependencies]
+tree-sitter-language.workspace = true
+
+[build-dependencies]
+cc.workspace = true
+
+# The workspace's lints, but for `unsafe_code`: a grammar is C, reached
+# through `extern "C"`. The rest stays as strict.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+unreachable_pub = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

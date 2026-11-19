@@ -3,6 +3,7 @@
 //! thin layer over it.
 
 pub mod check;
+pub mod code;
 pub mod config;
 pub mod document;
 pub mod error;

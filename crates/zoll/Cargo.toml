@@ -11,13 +11,45 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 
+[features]
+# The languages, as zoll_core names them (docs/design.md, section 7).
+default = ["base"]
+base = ["zoll_core/base"]
+awk = ["zoll_core/awk"]
+bash = ["zoll_core/bash"]
+c = ["zoll_core/c"]
+c_sharp = ["zoll_core/c_sharp"]
+cpp = ["zoll_core/cpp"]
+css = ["zoll_core/css"]
+dockerfile = ["zoll_core/dockerfile"]
+go = ["zoll_core/go"]
+groovy = ["zoll_core/groovy"]
+hcl = ["zoll_core/hcl"]
+html = ["zoll_core/html"]
+java = ["zoll_core/java"]
+javascript = ["zoll_core/javascript"]
+jq = ["zoll_core/jq"]
+kotlin = ["zoll_core/kotlin"]
+make = ["zoll_core/make"]
+markdown = ["zoll_core/markdown"]
+php = ["zoll_core/php"]
+powershell = ["zoll_core/powershell"]
+python = ["zoll_core/python"]
+ruby = ["zoll_core/ruby"]
+rust = ["zoll_core/rust"]
+sql = ["zoll_core/sql"]
+swift = ["zoll_core/swift"]
+tsx = ["zoll_core/tsx"]
+typescript = ["zoll_core/typescript"]
+xml = ["zoll_core/xml"]
+
 [dependencies]
 annotate-snippets.workspace = true
 anstream.workspace = true
 anstyle.workspace = true
 clap.workspace = true
 serde_json.workspace = true
-zoll_core = { path = "../zoll_core" }
+zoll_core = { path = "../zoll_core", default-features = false }
 
 [lints]
 workspace = true

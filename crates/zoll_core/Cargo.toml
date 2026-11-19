@@ -9,6 +9,67 @@ repository.workspace = true
 authors.workspace = true
 publish = false
 
+[features]
+# The base set of docs/design.md, section 7. A language is a feature of its
+# name; YAML, JSON and TOML are read as data and are always there.
+default = ["base"]
+base = [
+  "awk",
+  "bash",
+  "c",
+  "c_sharp",
+  "cpp",
+  "css",
+  "dockerfile",
+  "go",
+  "groovy",
+  "hcl",
+  "html",
+  "java",
+  "javascript",
+  "jq",
+  "kotlin",
+  "make",
+  "markdown",
+  "php",
+  "powershell",
+  "python",
+  "ruby",
+  "rust",
+  "sql",
+  "swift",
+  "tsx",
+  "typescript",
+  "xml",
+]
+awk = ["zoll_grammars/awk"]
+bash = ["dep:tree-sitter-bash"]
+c = ["dep:tree-sitter-c"]
+c_sharp = ["dep:tree-sitter-c-sharp"]
+cpp = ["dep:tree-sitter-cpp"]
+css = ["dep:tree-sitter-css"]
+dockerfile = ["dep:tree-sitter-containerfile"]
+go = ["dep:tree-sitter-go"]
+groovy = ["dep:tree-sitter-groovy"]
+hcl = ["dep:tree-sitter-hcl"]
+html = ["dep:tree-sitter-html"]
+java = ["dep:tree-sitter-java"]
+javascript = ["dep:tree-sitter-javascript"]
+jq = ["zoll_grammars/jq"]
+kotlin = ["dep:tree-sitter-kotlin-ng"]
+make = ["dep:tree-sitter-make"]
+markdown = ["dep:tree-sitter-md"]
+php = ["dep:tree-sitter-php"]
+powershell = ["dep:tree-sitter-powershell"]
+python = ["dep:tree-sitter-python"]
+ruby = ["dep:tree-sitter-ruby"]
+rust = ["dep:tree-sitter-rust"]
+sql = ["dep:tree-sitter-sequel"]
+swift = ["dep:tree-sitter-swift"]
+tsx = ["dep:tree-sitter-typescript"]
+typescript = ["dep:tree-sitter-typescript"]
+xml = ["dep:tree-sitter-xml"]
+
 [dependencies]
 globset.workspace = true
 ignore.workspace = true
@@ -18,6 +79,32 @@ saphyr-parser.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true
+tree-sitter.workspace = true
+tree-sitter-bash = { workspace = true, optional = true }
+tree-sitter-c = { workspace = true, optional = true }
+tree-sitter-c-sharp = { workspace = true, optional = true }
+tree-sitter-containerfile = { workspace = true, optional = true }
+tree-sitter-cpp = { workspace = true, optional = true }
+tree-sitter-css = { workspace = true, optional = true }
+tree-sitter-go = { workspace = true, optional = true }
+tree-sitter-groovy = { workspace = true, optional = true }
+tree-sitter-hcl = { workspace = true, optional = true }
+tree-sitter-html = { workspace = true, optional = true }
+tree-sitter-java = { workspace = true, optional = true }
+tree-sitter-javascript = { workspace = true, optional = true }
+tree-sitter-kotlin-ng = { workspace = true, optional = true }
+tree-sitter-make = { workspace = true, optional = true }
+tree-sitter-md = { workspace = true, optional = true }
+tree-sitter-php = { workspace = true, optional = true }
+tree-sitter-powershell = { workspace = true, optional = true }
+tree-sitter-python = { workspace = true, optional = true }
+tree-sitter-ruby = { workspace = true, optional = true }
+tree-sitter-rust = { workspace = true, optional = true }
+tree-sitter-sequel = { workspace = true, optional = true }
+tree-sitter-swift = { workspace = true, optional = true }
+tree-sitter-typescript = { workspace = true, optional = true }
+tree-sitter-xml = { workspace = true, optional = true }
+zoll_grammars.workspace = true
 
 [lints]
 workspace = true

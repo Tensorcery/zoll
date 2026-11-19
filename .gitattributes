@@ -8,3 +8,6 @@ uv.lock     -diff  linguist-generated=true
 # byte: a byte order mark or a line ending git rewrote would test something
 # else.
 crates/*/tests/corpus/**  -text
+
+# Generated parsers: nothing reads them in a diff.
+crates/zoll_grammars/vendor/**  -diff  linguist-vendored=true

@@ -45,6 +45,13 @@ pub const LANGUAGES: [&str; 30] = [
     "yaml",
 ];
 
+/// Whether this zoll parses `language`: a data format always, code when it
+/// was built with the grammar.
+#[must_use]
+pub fn compiled(language: &str) -> bool {
+    matches!(language, "yaml" | "json" | "toml") || crate::code::compiled(language)
+}
+
 /// File names that tell their language whole.
 const NAMES: [(&str, &str); 11] = [
     ("Containerfile", "dockerfile"),
