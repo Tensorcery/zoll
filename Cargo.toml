@@ -13,9 +13,10 @@ authors = ["Tensorcery"]
 # Versions live here once; a crate names a dependency with `workspace = true`.
 [workspace.dependencies]
 clap = { version = "4.6.8", features = ["derive"] }
-insta = "1.49.0"
+insta = { version = "1.49.0", features = ["filters"] }
 insta-cmd = "0.7.0"
 serde = { version = "1.0.229", features = ["derive"] }
+tempfile = "3.27.0"
 toml = "1.2.1"
 
 # Every crate takes these with `[lints] workspace = true`.

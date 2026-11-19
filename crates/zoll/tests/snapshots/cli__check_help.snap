@@ -1,0 +1,27 @@
+---
+source: crates/zoll/tests/cli.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Check files against the policies
+
+Usage: zoll check [OPTIONS] [PATHS]...
+
+Arguments:
+  [PATHS]...  Files and directories to check [default: .]
+
+Options:
+      --config <PATH>      This config instead of the one found from the working directory up
+      --format <FORMAT>    How violations are printed [default: text] [possible values: text, json, github, sarif]
+      --color <WHEN>       When to color the output [default: auto] [possible values: auto, always, never]
+      --fail-on <FAIL_ON>  Which results fail the run; overrides the config's `fail-on` [possible values: deny, warn]
+      --locked             Fail when `zoll.lock` does not match the config's git policies
+  -h, --help               Print help
+
+----- stderr -----

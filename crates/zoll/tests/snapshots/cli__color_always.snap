@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli.rs
+info:
+  program: zoll
+  args:
+    - "--color"
+    - always
+    - check
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+[1;31merror[0m: [REPO]/zoll.toml: TOML parse error at line 1, column 1
+  |
+1 | x = 1
+  | ^
+unknown field `x`, expected one of `include`, `exclude`, `policies`, `data`, `fail-on`, `rego-version`, `packages`, `languages`, `per-file-ignores`

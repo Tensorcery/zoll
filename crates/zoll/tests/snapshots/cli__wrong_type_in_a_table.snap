@@ -1,0 +1,17 @@
+---
+source: crates/zoll/tests/cli.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: [REPO]/zoll.toml: TOML parse error at line 2, column 16
+  |
+2 | "scripts/**" = "bash.curl_pipe"
+  |                ^^^^^^^^^^^^^^^^
+invalid type: string "bash.curl_pipe", expected a sequence
