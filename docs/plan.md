@@ -29,17 +29,18 @@ prints where it is broken and exits 2; with a valid one it exits 0.
 
 ## 2. Files and data formats
 
-- [ ] the walk honours `.gitignore`, `include` and `exclude`, in parallel
-- [ ] the language of a file: the config's `languages`, then name and
+- [x] the walk honours `.gitignore`, `include` and `exclude`, in parallel
+- [x] the language of a file: the config's `languages`, then name and
       extension, then shebang
-- [ ] YAML, JSON and TOML become the document conftest gives (section 8.1)
-- [ ] a multi-document YAML file is split into its documents
-- [ ] a YAML `on:` key stays the string `on`, as in conftest (go-yaml v3),
-      not `true` - tested
-- [ ] `zoll inspect FILE` prints `input`, `data.conftest.file` and
+- [x] YAML, JSON and TOML become the document conftest gives (section 8.1)
+- [x] a multi-document YAML file is split into its documents, and a root
+      array into its items, as conftest evaluates them
+- [x] a YAML `on:` key stays the string `on` - tested. conftest reads YAML
+      1.1 and makes it `true`; zoll reads YAML 1.2 (section 8.1)
+- [x] `zoll inspect FILE` prints `input`, `data.conftest.file` and
       `data.zoll.file`
-- [ ] the same document as conftest for a corpus of real files, compared in
-      a test
+- [x] the same document as conftest for a corpus of real files, compared in
+      a test (`tests/corpus/`, written by `scripts/conftest-corpus.sh`)
 
 **Checkpoint:** `zoll inspect .github/workflows/ci.yml` prints the
 document a conftest policy would see.

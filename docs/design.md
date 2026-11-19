@@ -167,9 +167,27 @@ of its info string.
 
 ### 8.1 Data formats
 
-YAML, JSON and TOML: `input` is the parsed document, exactly as conftest
-gives it: no key added. A multi-document YAML file is evaluated one document
-at a time. `data.conftest.file` is set as conftest sets it (`{name, dir}`).
+YAML, JSON and TOML: `input` is the parsed document, as conftest gives it:
+no key added. A multi-document YAML file is evaluated one document at a
+time, and so is each item of a root array (YAML or JSON), as conftest
+evaluates them. `data.conftest.file` is set as conftest sets it: `name` the
+file name, `dir` its absolute directory.
+
+Where zoll differs from conftest, on purpose (owner's decision, 2026-11-19):
+
+- **YAML is YAML 1.2.** conftest reads YAML through `sigs.k8s.io/yaml`,
+  which is go-yaml v2 and YAML 1.1: GitHub's `on:` becomes the key `true`,
+  and `yes`, `no`, `y`, `n`, `on`, `off` become booleans. zoll keeps them
+  strings, as GitHub Actions and Kubernetes read the file. A conftest policy
+  that wrote `input["true"]` for a workflow's triggers writes `input.on`.
+  Merge keys (`<<`) are honoured, as GitLab CI and Compose files use them.
+- **A TOML date or time is the string TOML wrote it as.** conftest turns a
+  local one into the machine's time zone, which no policy can rely on.
+
+Like conftest, zoll refuses what JSON has no room for: `.inf` and `.nan`, a
+null key, a list or a mapping as a key. A later duplicate key wins, as in
+conftest. `tests/corpus/` holds real files with the documents conftest
+parsed them into, and a test compares them with zoll's.
 
 Dockerfile, HCL and XML are parsed as code in v1 (8.2): conftest builds
 their documents with Go libraries in shapes of their own, and re-creating
@@ -334,11 +352,21 @@ zoll check [PATHS...]       default: the current directory
   --format text|json|github|sarif
   --fail-on deny|warn
   --locked
+  --show-files              list each file to check and its language, check none
 
-zoll inspect FILE           input and data.zoll of the file and of each fragment
+zoll inspect FILE           input and data of the file and of each fragment
 zoll lock [--upgrade]
 zoll languages
 ```
+
+A file named in `PATHS` is checked even when `include` or `exclude` would
+leave it out, as ruff does. `include`, `exclude` and the `languages` table
+are globs from the config's directory; `*` stays inside a directory and
+`**` crosses them, and a `languages` glob without a `/` matches the file
+name wherever the file is.
+
+`zoll inspect` prints a JSON array, one object per evaluation: `{"input":
+..., "data": {"conftest": {"file": ...}, "zoll": {"file": ...}}}`.
 
 Exit codes: `0` no violation, `1` violations, `2` zoll itself failed
 (config, network, a policy that does not load).
@@ -421,6 +449,11 @@ discussed with the owner; they are the author's calls, open to correction.
 3. Cross-file rules (conftest `--combine`, all files as one `input`) are not
    in v1. They come later as a mode switched on explicitly, a new input shape
    beside the per-file one, so adding them breaks no policy.
+4. YAML is read as YAML 1.2, not as conftest's YAML 1.1: `on:` stays `on`
+   (8.1). Found while building stage 2; the plan had assumed conftest used
+   go-yaml v3.
+5. A root array is evaluated item by item, as conftest does, in YAML and
+   JSON alike (8.1).
 
 ## 16. Left to the builder
 

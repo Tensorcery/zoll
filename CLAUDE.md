@@ -33,7 +33,9 @@ language → every violation mapped back to `file:line:col` of the real file.
 | `crates/zoll/` | the command: arguments, output; a thin layer over `zoll_core` |
 | `crates/zoll_core/` | the engine: files, languages, fragments, policy evaluation |
 | `queries/<language>/injections.scm` | where a language holds code of another (tree-sitter queries) |
-| `crates/*/tests/` | tests; `snapshots/` next to them is insta's expected output |
+| `crates/zoll/tests/cli/` | the command run as a user runs it; `snapshots/` is insta's expected output |
+| `crates/zoll/tests/corpus/` | real files, each with the document conftest parses it into (`*.conftest.json`) |
+| `scripts/conftest-corpus.sh` | writes those `*.conftest.json` with conftest |
 | `pyproject.toml` | the PyPI wheel (maturin) and the Python tools of this repository |
 | `docs/design.md` | the decisions, and the public input model (section 8) |
 | `docs/plan.md` | the stages of v1 and their checkpoints; a ticked box is done |

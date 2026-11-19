@@ -13,7 +13,8 @@ runs your Rego policies over all of it.
 
 > **Status: design.** The engine is not written yet; what follows is the
 > agreed interface ([docs/design.md](docs/design.md)). Today the binary
-> reads and checks its config, and runs no policy yet.
+> finds the files and their languages and gives YAML, JSON and TOML their
+> documents (`zoll inspect`); it runs no policy yet.
 
 ## How it works
 
@@ -25,7 +26,8 @@ runs your Rego policies over all of it.
 
 1. Each file's language comes from its name, extension or shebang.
 2. Data formats (YAML, JSON, TOML…) become the document conftest would give
-   your policy; code becomes its tree-sitter tree, as JSON.
+   your policy - with YAML read as YAML 1.2, so `on:` stays `on`; code
+   becomes its tree-sitter tree, as JSON.
 3. Code embedded in it is found by where it sits - the argument of `awk`,
    the value of `run:` - and is checked as a file of its own, to any depth.
 4. A policy in `package bash` runs on bash wherever it is: a `.sh` file, a
