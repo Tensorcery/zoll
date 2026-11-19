@@ -54,11 +54,6 @@ fn errors_stay_in_the_tree() -> TestResult {
     Ok(())
 }
 
-#[test]
-fn languages_compiled_in() {
-    assert_cmd_snapshot!(crate::zoll().arg("languages"));
-}
-
 const CURL_PIPE: &str = r#"package bash
 
 # A pipe into a shell downloads and runs code nobody reviewed.

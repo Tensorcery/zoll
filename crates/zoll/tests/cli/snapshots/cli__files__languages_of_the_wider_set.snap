@@ -1,0 +1,34 @@
+---
+source: crates/zoll/tests/cli/files.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--show-files"
+---
+success: true
+exit_code: 0
+----- stdout -----
+svelte     App.svelte
+starlark   BUILD.bazel
+cmake      CMakeLists.txt
+haskell    Main.hs
+scala      Main.scala
+proto      api.proto
+scala      build.sbt
+zig        build.zig
+gotmpl     chart/templates/_helpers.tpl
+nix        default.nix
+starlark   defs.bzl
+lua        init.lua
+just       justfile
+dart       main.dart
+jsonnet    main.jsonnet
+elixir     mix.exs
+nginx      nginx.conf
+graphql    schema.graphql
+ini        setup.cfg
+scss       style.scss
+perl       tidy.pl
+
+----- stderr -----

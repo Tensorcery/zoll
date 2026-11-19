@@ -11,7 +11,9 @@ exit_code: 0
 ----- stdout -----
 awk        bin/columns
 bash       bin/deploy
+lua        bin/hook
 python     bin/report
 javascript bin/serve
+perl       bin/tidy
 
 ----- stderr -----

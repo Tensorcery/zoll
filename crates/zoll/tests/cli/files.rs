@@ -34,13 +34,44 @@ fn by_name_and_extension() -> TestResult {
 }
 
 #[test]
+fn languages_of_the_wider_set() -> TestResult {
+    let repo = Repo::new(&[
+        ("chart/templates/_helpers.tpl", ""),
+        ("default.nix", ""),
+        ("BUILD.bazel", ""),
+        ("defs.bzl", ""),
+        ("CMakeLists.txt", ""),
+        ("api.proto", ""),
+        ("schema.graphql", ""),
+        ("setup.cfg", ""),
+        ("nginx.conf", ""),
+        ("main.jsonnet", ""),
+        ("justfile", ""),
+        ("init.lua", ""),
+        ("tidy.pl", ""),
+        ("style.scss", ""),
+        ("App.svelte", ""),
+        ("Main.scala", ""),
+        ("build.sbt", ""),
+        ("main.dart", ""),
+        ("mix.exs", ""),
+        ("Main.hs", ""),
+        ("build.zig", ""),
+    ])?;
+    assert_cmd_snapshot!(show_files(&repo));
+    Ok(())
+}
+
+#[test]
 fn by_shebang() -> TestResult {
     let repo = Repo::new(&[
         ("bin/deploy", "#!/bin/sh\necho hi\n"),
         ("bin/report", "#!/usr/bin/env python3.12\nprint()\n"),
         ("bin/columns", "#!/usr/bin/env -S awk -f\n{ print $1 }\n"),
         ("bin/serve", "#!/usr/bin/env node\n"),
-        ("bin/unknown", "#!/usr/bin/perl\n"),
+        ("bin/tidy", "#!/usr/bin/perl -w\n"),
+        ("bin/hook", "#!/usr/bin/env lua\n"),
+        ("bin/unknown", "#!/usr/bin/tclsh\n"),
         ("bin/plain", "no shebang\n"),
     ])?;
     assert_cmd_snapshot!(show_files(&repo));

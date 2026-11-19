@@ -436,3 +436,30 @@ impl Columns {
         byte - past.checked_sub(1).map_or(0, |i| self.0[i].1)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // The base set: a build with fewer languages leaves the others out.
+    #[cfg(feature = "base")]
+    #[test]
+    fn every_grammar_loads() {
+        for language in LANGUAGES {
+            if matches!(language, "yaml" | "json" | "toml") {
+                continue;
+            }
+            let (grammar, node_types) = grammar(language).unwrap_or_else(|| {
+                unreachable!("{language} is in the base set but not compiled in")
+            });
+            assert!(
+                Parser::new().set_language(&grammar).is_ok(),
+                "{language}: the runtime refuses its grammar"
+            );
+            assert!(
+                serde_json::from_str::<Vec<NodeType>>(node_types).is_ok(),
+                "{language}: its node-types.json does not read"
+            );
+        }
+    }
+}
