@@ -2,12 +2,11 @@
 //! (docs/design.md, section 9).
 
 use std::collections::BTreeMap;
-use std::fmt;
-use std::io;
-use std::ops::Range;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
+
+use crate::error::{Error, SourceError};
 
 /// The files a directory may hold the config in, in the order they are
 /// tried, as ruff tries its own.
@@ -88,34 +87,15 @@ pub enum RegoVersion {
     V1,
 }
 
-/// A config that could not be read.
+/// A config, and the directory its globs and paths are relative to.
 #[derive(Debug)]
-pub enum Error {
-    /// The file is missing or unreadable.
-    Read(PathBuf, io::Error),
-    /// The file is not TOML, or holds a field or a value zoll does not take.
-    Parse {
-        /// The file.
-        path: PathBuf,
-        /// Its text, for the command to show the line.
-        text: String,
-        /// What is wrong, and what was expected.
-        message: String,
-        /// Where in `text`, in bytes, when the parser knows.
-        span: Option<Range<usize>>,
-    },
+pub struct Loaded {
+    /// The settings.
+    pub config: Config,
+    /// The directory of the config file found; the working directory when
+    /// none was, or when `--config` named one.
+    pub root: PathBuf,
 }
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Read(path, error) => write!(f, "{}: {error}", path.display()),
-            Self::Parse { path, message, .. } => write!(f, "{}: {message}", path.display()),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
 
 /// The config of a directory: the first config file in it or in a directory
 /// above; the defaults when there is none.
@@ -123,44 +103,54 @@ impl std::error::Error for Error {}
 /// # Errors
 ///
 /// The config found is unreadable or invalid.
-pub fn discover(dir: &Path) -> Result<Config, Error> {
-    for dir in dir.ancestors() {
+pub fn discover(dir: &Path) -> Result<Loaded, Error> {
+    for root in dir.ancestors() {
         for name in NAMES {
-            let path = dir.join(name);
+            let path = root.join(name);
             if !path.is_file() {
                 continue;
             }
             if let Some(config) = parse(&path)? {
-                return Ok(config);
+                let root = root.to_owned();
+                return Ok(Loaded { config, root });
             }
         }
     }
-    Ok(Config::default())
+    let root = dir.to_owned();
+    Ok(Loaded {
+        config: Config::default(),
+        root,
+    })
 }
 
-/// The config in this file, named by `--config`.
+/// The config in this file, named by `--config`; its paths are relative to
+/// `dir`, the working directory.
 ///
 /// # Errors
 ///
 /// The file is unreadable or invalid. A `pyproject.toml` without
 /// `[tool.zoll]` gives the defaults.
-pub fn load(path: &Path) -> Result<Config, Error> {
-    Ok(parse(path)?.unwrap_or_default())
+pub fn load(path: &Path, dir: &Path) -> Result<Loaded, Error> {
+    let config = parse(path)?.unwrap_or_default();
+    let root = dir.to_owned();
+    Ok(Loaded { config, root })
 }
 
 /// The config in a file; `None` for a `pyproject.toml` that has no
 /// `[tool.zoll]`.
 fn parse(path: &Path) -> Result<Option<Config>, Error> {
-    let text = std::fs::read_to_string(path).map_err(|e| Error::Read(path.to_owned(), e))?;
-    let parse_error = |e: toml::de::Error| Error::Parse {
-        path: path.to_owned(),
-        text: text.clone(),
-        // serde's words for the TOML ones.
-        message: e
-            .message()
-            .replace("a sequence", "an array")
-            .replace("a map", "a table"),
-        span: e.span(),
+    let text = std::fs::read_to_string(path).map_err(|e| Error::Io(path.to_owned(), e))?;
+    let parse_error = |e: toml::de::Error| {
+        Error::Source(SourceError {
+            path: path.to_owned(),
+            text: text.clone(),
+            // serde's words for the TOML ones.
+            message: e
+                .message()
+                .replace("a sequence", "an array")
+                .replace("a map", "a table"),
+            span: e.span(),
+        })
     };
     if path
         .file_name()

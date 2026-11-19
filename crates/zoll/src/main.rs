@@ -10,7 +10,8 @@ use anstream::AutoStream;
 use anstyle::{AnsiColor, Effects};
 use clap::builder::Styles;
 use clap::{ColorChoice, Parser, Subcommand, ValueEnum};
-use zoll_core::config;
+use zoll_core::language::{LANGUAGES, Languages};
+use zoll_core::{Error, SourceError, config, input, walk};
 
 /// The colors of `--help`, as cargo and uv have them.
 const STYLES: Styles = Styles::styled()
@@ -42,7 +43,6 @@ struct Cli {
 
 // The arguments of the commands not built yet are parsed, and read by the
 // stage that builds them (docs/plan.md).
-#[expect(dead_code, reason = "read as each command is built")]
 #[derive(Subcommand)]
 enum Command {
     /// Check files against the policies.
@@ -52,16 +52,24 @@ enum Command {
         paths: Vec<PathBuf>,
 
         /// How violations are printed.
+        #[expect(dead_code, reason = "read once policies run")]
         #[arg(long, value_enum, default_value_t = Format::Text)]
         format: Format,
 
         /// Which results fail the run; overrides the config's `fail-on`.
+        #[expect(dead_code, reason = "read once policies run")]
         #[arg(long, value_parser = ["deny", "warn"])]
         fail_on: Option<String>,
 
         /// Fail when `zoll.lock` does not match the config's git policies.
+        #[expect(dead_code, reason = "read once policies come from git")]
         #[arg(long)]
         locked: bool,
+
+        /// List the files that would be checked, each with its language, and
+        /// check none.
+        #[arg(long)]
+        show_files: bool,
     },
     /// Print the input a policy sees for a file and for each fragment in it.
     Inspect {
@@ -71,6 +79,7 @@ enum Command {
     /// Pin each git policy source to its commit in `zoll.lock`.
     Lock {
         /// Move every source to the commit its ref points at now.
+        #[expect(dead_code, reason = "read once policies come from git")]
         #[arg(long)]
         upgrade: bool,
     },
@@ -93,62 +102,104 @@ const FAILED: u8 = 2;
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let mut stderr = AutoStream::new(io::stderr().lock(), stream_color(cli.color));
-    match run(&cli) {
+    // Without a working directory, the paths given stay as they were given.
+    let cwd = env::current_dir().unwrap_or_default();
+    match run(&cli, &cwd, &mut io::stdout().lock()) {
         Ok(()) => ExitCode::SUCCESS,
-        Err(failure) => {
+        // The reader stopped reading (`zoll inspect FILE | head`): nothing
+        // went wrong.
+        Err(Error::Io(_, error)) if error.kind() == io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
+        Err(error) => {
             // Nowhere is left to report a failed write to stderr.
-            let _ = writeln!(stderr, "{}", render(&failure));
+            let _ = writeln!(stderr, "{}", render(&error, &cwd));
             ExitCode::from(FAILED)
         }
     }
 }
 
-/// Why zoll itself failed.
-enum Failure {
-    Config(config::Error),
-    Other(String),
-}
-
-fn run(cli: &Cli) -> Result<(), Failure> {
+fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<(), Error> {
     let name = match &cli.command {
-        Command::Check { .. } => {
-            let _config = load_config(cli.config.as_deref())?;
+        Command::Check {
+            paths, show_files, ..
+        } => {
+            let loaded = load_config(cli.config.as_deref(), cwd)?;
+            let languages = Languages::new(&loaded.config.languages)?;
+            let paths: Vec<_> = paths.iter().map(|path| cwd.join(path)).collect();
+            let files = walk::files(&paths, &loaded.root, &loaded.config, &languages)?;
+            if *show_files {
+                for file in files {
+                    writeln!(out, "{:<10} {}", file.language, shown(&file.path, cwd))
+                        .map_err(stdout)?;
+                }
+            }
             return Ok(());
         }
-        Command::Inspect { .. } => "inspect",
+        Command::Inspect { file } => {
+            let loaded = load_config(cli.config.as_deref(), cwd)?;
+            let languages = Languages::new(&loaded.config.languages)?;
+            let path = cwd.join(file);
+            std::fs::metadata(&path).map_err(|e| Error::Io(path.clone(), e))?;
+            let relative = walk::relative(&path, &loaded.root);
+            let Some(language) = languages.of(Path::new(&relative), &path) else {
+                return Err(Error::Other(format!(
+                    "{}: no language is known for this file; name one in the config's \
+                     `languages` table",
+                    shown(&path, cwd)
+                )));
+            };
+            let file = walk::File {
+                path,
+                relative,
+                language,
+            };
+            let evaluations = input::evaluations(&file)?;
+            serde_json::to_writer_pretty(&mut *out, &evaluations).map_err(|e| stdout(e.into()))?;
+            writeln!(out).map_err(stdout)?;
+            return Ok(());
+        }
+        Command::Languages => {
+            for language in LANGUAGES {
+                writeln!(out, "{language}").map_err(stdout)?;
+            }
+            return Ok(());
+        }
         Command::Lock { .. } => "lock",
-        Command::Languages => "languages",
     };
-    Err(Failure::Other(format!("`zoll {name}` is not built yet")))
+    Err(Error::Other(format!("`zoll {name}` is not built yet")))
+}
+
+fn stdout(error: io::Error) -> Error {
+    Error::Io(PathBuf::from("stdout"), error)
 }
 
 /// The config `--config` names, or the one found from the working directory up.
-fn load_config(path: Option<&Path>) -> Result<config::Config, Failure> {
-    let config = if let Some(path) = path {
-        config::load(path)
-    } else {
-        let dir = env::current_dir().map_err(|e| Failure::Other(e.to_string()))?;
-        config::discover(&dir)
-    };
-    config.map_err(Failure::Config)
+fn load_config(path: Option<&Path>, cwd: &Path) -> Result<config::Loaded, Error> {
+    match path {
+        Some(path) => config::load(path, cwd),
+        None => config::discover(cwd),
+    }
 }
 
-/// A failure as rustc draws an error: the message, then the line it is on,
+/// An error as rustc draws one: the message, then the line it is on,
 /// marked. Styled always; `AutoStream` drops the style where it is not wanted.
-fn render(failure: &Failure) -> String {
+fn render(error: &Error, cwd: &Path) -> String {
     let renderer = Renderer::styled();
-    let Failure::Config(config::Error::Parse {
+    let title = |message: String| {
+        renderer.render(&[Group::with_title(Level::ERROR.primary_title(message))])
+    };
+    let SourceError {
         path,
         text,
         message,
-        span: Some(span),
-    }) = failure
-    else {
-        let message = match failure {
-            Failure::Config(error) => error.to_string(),
-            Failure::Other(message) => message.clone(),
-        };
-        return renderer.render(&[Group::with_title(Level::ERROR.primary_title(message))]);
+        span,
+    } = match error {
+        Error::Source(source) => source,
+        Error::Io(path, error) => return title(format!("{}: {error}", shown(path, cwd))),
+        Error::Other(message) => return title(message.clone()),
+    };
+    let path = shown(path, cwd);
+    let Some(span) = span else {
+        return title(format!("{path}: {message}"));
     };
     // "unknown field `x`, expected one of ..." - the first half heads the
     // error, the second marks the place.
@@ -156,7 +207,6 @@ fn render(failure: &Failure) -> String {
         Some((title, expected)) => (title.to_owned(), Some(format!("expected {expected}"))),
         None => (message.clone(), None),
     };
-    let path = shown(path);
     let snippet = Snippet::source(text.as_str())
         .path(path.as_str())
         .annotation(AnnotationKind::Primary.span(span.clone()).label(label));
@@ -165,13 +215,8 @@ fn render(failure: &Failure) -> String {
 
 /// A path as the user would type it: relative to the working directory when
 /// it is under it.
-fn shown(path: &Path) -> String {
-    env::current_dir()
-        .ok()
-        .and_then(|dir| path.strip_prefix(dir).ok())
-        .unwrap_or(path)
-        .display()
-        .to_string()
+fn shown(path: &Path, cwd: &Path) -> String {
+    path.strip_prefix(cwd).unwrap_or(path).display().to_string()
 }
 
 fn stream_color(choice: ColorChoice) -> anstream::ColorChoice {

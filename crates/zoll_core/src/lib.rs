@@ -3,3 +3,10 @@
 //! thin layer over it.
 
 pub mod config;
+pub mod document;
+pub mod error;
+pub mod input;
+pub mod language;
+pub mod walk;
+
+pub use error::{Error, SourceError};

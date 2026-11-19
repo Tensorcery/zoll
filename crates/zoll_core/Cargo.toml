@@ -10,7 +10,11 @@ authors.workspace = true
 publish = false
 
 [dependencies]
+globset.workspace = true
+ignore.workspace = true
+saphyr-parser.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 toml.workspace = true
 
 [lints]
