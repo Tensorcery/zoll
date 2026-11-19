@@ -1,5 +1,6 @@
 //! Code into the tree a policy is given (docs/design.md, section 8.2).
 
+use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::sync::{LazyLock, OnceLock};
 
@@ -12,6 +13,14 @@ use crate::language::LANGUAGES;
 /// How deep a tree may be: deeper ones are refused, not walked into a
 /// stack overflow.
 const MAX_DEPTH: usize = 512;
+
+/// How many times the file's size the text of all nodes may take. Every
+/// node repeats the text under it, so a deep tree copies the file many times
+/// over; real code takes 6 to 11 (docs/design.md, section 8.2).
+const MAX_TEXT_RATIO: usize = 64;
+
+/// The text every tree may hold, however small its file.
+const MIN_TEXT: usize = 1 << 20;
 
 /// The grammar of a language and its `node-types.json`, when zoll was built
 /// with it.
@@ -172,6 +181,7 @@ pub fn tree(language: &str, text: &str) -> Option<Result<Value, String>> {
         text,
         multiple: multiple(language, node_types),
         columns: Columns::new(text),
+        text_left: Cell::new(text.len().saturating_mul(MAX_TEXT_RATIO).max(MIN_TEXT)),
     };
     Some(builder.node(tree.root_node(), 0))
 }
@@ -222,6 +232,8 @@ struct Builder<'a> {
     text: &'a str,
     multiple: &'a Multiple,
     columns: Columns,
+    /// The bytes of text the nodes not built yet may still take.
+    text_left: Cell<usize>,
 }
 
 impl Builder<'_> {
@@ -262,6 +274,12 @@ impl Builder<'_> {
         // Every node, not the leaves only: a policy reads a node's text
         // without knowing how its grammar nests it.
         let text = self.text.get(node.byte_range()).unwrap_or_default();
+        let Some(left) = self.text_left.get().checked_sub(text.len()) else {
+            return Err(format!(
+                "the text of its nodes is more than {MAX_TEXT_RATIO} times the file's"
+            ));
+        };
+        self.text_left.set(left);
         object.insert("text".to_owned(), text.into());
         if !fields.is_empty() {
             object.insert("fields".to_owned(), Value::Object(fields));
