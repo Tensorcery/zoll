@@ -1,7 +1,7 @@
 {
   "threshold": 0,
   "gitignore": true,
-  "ignore": ["**/Cargo.lock", "**/uv.lock", "**/LICENSE", "**/*.snap", "**/docs/langs/**"],
+  "ignore": ["**/Cargo.lock", "**/uv.lock", "**/LICENSE", "**/*.snap", "**/docs/langs/**", "**/queries/**"],
   "reporters": ["console"],
   "absolute": false
 }

@@ -1,6 +1,6 @@
 [package]
 name = "zoll_core"
-description = "The engine of zoll: files, languages, embedded fragments, policies"
+description = "The engine of zoll: languages, parsing, embedded fragments, policy evaluation"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

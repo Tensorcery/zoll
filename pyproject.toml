@@ -1,13 +1,14 @@
 # zoll is a Rust binary; this file ships it to PyPI as a wheel per platform
-# (maturin), so `uv tool install zoll` installs it, and holds the Python
-# tools the repository is checked with.
+# (maturin), so `uv tool install zoll-lint` installs the `zoll` command, and
+# holds the Python tools the repository is checked with. The PyPI name is
+# zoll-lint: PyPI refuses `zoll` as too similar to the project `zoil`.
 [build-system]
 requires = ["maturin>=1.13,<2"]
 build-backend = "maturin"
 
 [project]
-name = "zoll"
-description = "Finds code hidden inside other code and data, and judges it by Rego policies"
+name = "zoll-lint"
+description = "A policy engine for files of any language: Rego over data, code, and the code embedded in either"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

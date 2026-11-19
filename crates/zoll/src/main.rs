@@ -4,8 +4,9 @@ use std::process::ExitCode;
 
 use clap::Parser;
 
-/// Finds code hidden inside other code and data - awk in a shell string, shell
-/// in a YAML `run:` - and judges it by Rego policies.
+/// A policy engine for files of any language: Rego policies over data formats,
+/// code, and the code embedded in either - awk in a shell string, shell in a
+/// YAML `run:`.
 #[derive(Parser)]
 #[command(version)]
 struct Cli {}
