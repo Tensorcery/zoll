@@ -70,6 +70,11 @@ review` shows the difference and takes it.
 Conventional Commits, checked by commitizen (`cz.toml`) on every commit. The
 version is the workspace's in `Cargo.toml`; `cz bump` raises it there.
 
+A change's code, its tests and its documentation are separate commits, in
+that order: first `feat`, `fix` or `refactor` with the code alone; then
+`test`; then `docs`. Each later one names in its body the commit it follows,
+by its short hash: `Follows 1a2b3c4.`
+
 ## Docs
 
 `README.md` is in English, with a Russian copy in `docs/langs/ru/README.md`
