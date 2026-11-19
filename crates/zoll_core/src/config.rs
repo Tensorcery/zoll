@@ -22,8 +22,9 @@ pub struct Config {
     /// Globs of the files to skip, on top of `.gitignore`.
     #[serde(default)]
     pub exclude: Vec<String>,
-    /// Policy sources: a directory, or `git+<url>//<dir>@<ref>`.
-    #[serde(default)]
+    /// Policy sources: a directory, or `git+<url>//<dir>@<ref>`; `policy/`
+    /// when the config names none, as conftest's default.
+    #[serde(default = "policy_dir")]
     pub policies: Vec<String>,
     /// Directories of JSON and YAML loaded under `data.*`.
     #[serde(default)]
@@ -50,7 +51,7 @@ impl Default for Config {
         Self {
             include: everything(),
             exclude: Vec::new(),
-            policies: Vec::new(),
+            policies: policy_dir(),
             data: Vec::new(),
             fail_on: FailOn::default(),
             rego_version: RegoVersion::default(),
@@ -59,6 +60,10 @@ impl Default for Config {
             per_file_ignores: BTreeMap::new(),
         }
     }
+}
+
+fn policy_dir() -> Vec<String> {
+    vec!["policy/".to_owned()]
 }
 
 fn everything() -> Vec<String> {

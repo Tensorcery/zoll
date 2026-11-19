@@ -7,6 +7,8 @@ use std::iter::Peekable;
 use saphyr_parser::{Event, Parser, ScalarStyle, ScanError, Span, StrInput, Tag};
 use serde_json::{Map, Number, Value};
 
+use super::Step;
+
 /// Nodes one file may build, the copies anchors keep and aliases make
 /// counted: a few aliases of aliases can otherwise ask for more memory than
 /// the machine has.
@@ -30,20 +32,44 @@ impl From<ScanError> for YamlError {
     }
 }
 
+/// Where each path of a document is: the key of a mapping entry, the node
+/// of a sequence item, the root node at the empty path. A path inside an
+/// alias or a merged mapping is not there; its nearest recorded parent is.
+pub(super) type Places = HashMap<Vec<Step>, Span>;
+
 /// The documents of a YAML stream, in order.
 pub(super) fn documents(text: &str) -> Result<Vec<Value>, YamlError> {
+    Ok(build(text, false)?
+        .into_iter()
+        .map(|(value, _)| value)
+        .collect())
+}
+
+/// Where the paths of each document of a YAML stream are.
+pub(super) fn places(text: &str) -> Result<Vec<Places>, YamlError> {
+    Ok(build(text, true)?
+        .into_iter()
+        .map(|(_, places)| places)
+        .collect())
+}
+
+fn build(text: &str, record: bool) -> Result<Vec<(Value, Places)>, YamlError> {
     let mut builder = Builder {
         events: Parser::new_from_str(text).peekable(),
         anchors: HashMap::new(),
         nodes: 0,
+        record,
+        path: Vec::new(),
+        places: Places::new(),
     };
     let mut documents = Vec::new();
     loop {
         match builder.next()? {
             (Event::StreamEnd, _) => return Ok(documents),
             (Event::DocumentStart(_), _) => {
-                documents.push(builder.node(0)?);
+                let value = builder.node(0)?;
                 builder.next()?; // DocumentEnd
+                documents.push((value, std::mem::take(&mut builder.places)));
             }
             _ => {} // StreamStart
         }
@@ -56,6 +82,11 @@ struct Builder<'a> {
     anchors: HashMap<usize, (Value, usize)>,
     /// Nodes built so far, aliases counted at their full size.
     nodes: usize,
+    /// Whether to keep where each path is, in `places`.
+    record: bool,
+    /// The path of the node being built.
+    path: Vec<Step>,
+    places: Places,
 }
 
 impl<'a> Builder<'a> {
@@ -97,6 +128,9 @@ impl<'a> Builder<'a> {
         if depth > MAX_DEPTH {
             return Err(error(span, "nested more than 512 deep"));
         }
+        if self.record {
+            self.places.entry(self.path.clone()).or_insert(span);
+        }
         let (value, anchor) = match event {
             Event::Alias(id) => {
                 let Some((value, size)) = self.anchors.get(&id).cloned() else {
@@ -113,7 +147,10 @@ impl<'a> Builder<'a> {
                 self.count(1, span)?;
                 let mut items = Vec::new();
                 while !self.peek_ends() {
-                    items.push(self.node(depth + 1)?);
+                    self.path.push(Step::Index(items.len()));
+                    let item = self.node(depth + 1);
+                    self.path.pop();
+                    items.push(item?);
                 }
                 self.next()?;
                 (Value::Array(items), anchor)
@@ -162,9 +199,16 @@ impl<'a> Builder<'a> {
                 .peek()
                 .and_then(|e| e.as_ref().ok())
                 .map(|e| e.1);
-            let key = key(self.node(depth + 1)?, span.unwrap_or_default())?;
-            let value = self.node(depth + 1)?;
-            own.insert(key, value);
+            let span = span.unwrap_or_default();
+            let key = key(self.node(depth + 1)?, span)?;
+            self.path.push(Step::Key(key.clone()));
+            if self.record {
+                // A path points at its key: `run:`, not the script under it.
+                self.places.insert(self.path.clone(), span);
+            }
+            let value = self.node(depth + 1);
+            self.path.pop();
+            own.insert(key, value?);
         }
         self.next()?;
         merged.extend(own);

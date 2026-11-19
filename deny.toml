@@ -6,6 +6,12 @@ all-features = true
 # A RustSec advisory or a yanked version fails the check.
 [advisories]
 yanked = "deny"
+ignore = [
+  # chrono and chrono-tz are unmaintained, not vulnerable: regorus needs them
+  # for OPA's time.* builtins, which conftest policies use.
+  { id = "RUSTSEC-2026-0543", reason = "chrono: unmaintained; regorus's time.* builtins" },
+  { id = "RUSTSEC-2026-0555", reason = "chrono-tz: unmaintained; regorus's time.* builtins" },
+]
 
 # Only permissive licenses: zoll is MIT and stays usable anywhere.
 [licenses]

@@ -6,7 +6,7 @@ use std::path::Path;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use crate::document;
+use crate::document::{self, Origin};
 use crate::error::Error;
 use crate::walk::File;
 
@@ -17,17 +17,31 @@ pub struct Evaluation {
     pub input: Value,
     /// `data.conftest.file` and `data.zoll.file`.
     pub data: Value,
+    /// Where in the file the document came from.
+    #[serde(skip)]
+    pub origin: Origin,
 }
 
-/// The evaluations of a file: one per document.
+/// The text of a file; `-` is the standard input.
 ///
 /// # Errors
 ///
-/// The file cannot be read or does not parse, or is code, which zoll does
-/// not parse yet.
-pub fn evaluations(file: &File) -> Result<Vec<Evaluation>, Error> {
-    let text = std::fs::read_to_string(&file.path).map_err(|e| Error::Io(file.path.clone(), e))?;
-    let Some(documents) = document::documents(file.language, &file.path, &text)? else {
+/// The file cannot be read, or is not UTF-8.
+pub fn read(file: &File) -> Result<String, Error> {
+    let failed = |e| Error::Io(file.path.clone(), e);
+    if file.path.as_os_str() == "-" {
+        return std::io::read_to_string(std::io::stdin()).map_err(failed);
+    }
+    std::fs::read_to_string(&file.path).map_err(failed)
+}
+
+/// The evaluations of a file of this text: one per document.
+///
+/// # Errors
+///
+/// The text does not parse, or is code, which zoll does not parse yet.
+pub fn evaluations(file: &File, text: &str) -> Result<Vec<Evaluation>, Error> {
+    let Some(documents) = document::documents(file.language, &file.path, text)? else {
         return Err(Error::Other(format!(
             "{}: parsing {} is not built yet; zoll reads YAML, JSON and TOML",
             file.relative, file.language
@@ -36,9 +50,10 @@ pub fn evaluations(file: &File) -> Result<Vec<Evaluation>, Error> {
     let data = data(file);
     Ok(documents
         .into_iter()
-        .map(|input| Evaluation {
-            input,
+        .map(|document| Evaluation {
+            input: document.value,
             data: data.clone(),
+            origin: document.origin,
         })
         .collect())
 }

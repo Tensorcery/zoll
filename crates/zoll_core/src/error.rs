@@ -43,6 +43,28 @@ pub(crate) fn char_span(text: &str, index: usize) -> Range<usize> {
     start..end
 }
 
+/// The byte range of the character at `line` and `column` (both from 1, the
+/// column in characters) of `text`.
+pub(crate) fn line_column_span(text: &str, line: usize, column: usize) -> Range<usize> {
+    let line_start: usize = text
+        .split_inclusive('\n')
+        .take(line.saturating_sub(1))
+        .map(str::len)
+        .sum();
+    let index = text[line_start.min(text.len())..]
+        .chars()
+        .take(column.saturating_sub(1))
+        .map(char::len_utf8)
+        .sum::<usize>()
+        + line_start;
+    let index = index.min(text.len());
+    let end = text[index..]
+        .chars()
+        .next()
+        .map_or(index, |c| index + c.len_utf8());
+    index..end
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

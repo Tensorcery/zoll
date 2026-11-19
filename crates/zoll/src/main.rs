@@ -10,8 +10,12 @@ use anstream::AutoStream;
 use anstyle::{AnsiColor, Effects};
 use clap::builder::Styles;
 use clap::{ColorChoice, Parser, Subcommand, ValueEnum};
+use zoll_core::config::FailOn;
 use zoll_core::language::{LANGUAGES, Languages};
-use zoll_core::{Error, SourceError, config, input, walk};
+use zoll_core::policy::Policies;
+use zoll_core::{Error, SourceError, check, config, input, walk};
+
+mod report;
 
 /// The colors of `--help`, as cargo and uv have them.
 const STYLES: Styles = Styles::styled()
@@ -57,7 +61,6 @@ enum Command {
         format: Format,
 
         /// Which results fail the run; overrides the config's `fail-on`.
-        #[expect(dead_code, reason = "read once policies run")]
         #[arg(long, value_parser = ["deny", "warn"])]
         fail_on: Option<String>,
 
@@ -95,17 +98,23 @@ enum Format {
     Sarif,
 }
 
+/// Exit code 1: violations that fail the run.
+const VIOLATIONS: u8 = 1;
+
 /// Exit code 2: zoll itself failed - config, network, a policy that does
-/// not load. 1 is for violations, once policies run.
+/// not load.
 const FAILED: u8 = 2;
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    let mut stderr = AutoStream::new(io::stderr().lock(), stream_color(cli.color));
+    let color = stream_color(cli.color);
+    let mut stderr = AutoStream::new(io::stderr().lock(), color);
+    let mut stdout = AutoStream::new(io::stdout().lock(), color);
     // Without a working directory, the paths given stay as they were given.
     let cwd = env::current_dir().unwrap_or_default();
-    match run(&cli, &cwd, &mut io::stdout().lock()) {
-        Ok(()) => ExitCode::SUCCESS,
+    match run(&cli, &cwd, &mut stdout) {
+        Ok(false) => ExitCode::SUCCESS,
+        Ok(true) => ExitCode::from(VIOLATIONS),
         // The reader stopped reading (`zoll inspect FILE | head`): nothing
         // went wrong.
         Err(Error::Io(_, error)) if error.kind() == io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
@@ -117,22 +126,48 @@ fn main() -> ExitCode {
     }
 }
 
-fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<(), Error> {
+/// The command; `true` when violations fail the run.
+fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
     let name = match &cli.command {
         Command::Check {
-            paths, show_files, ..
+            paths,
+            show_files,
+            fail_on,
+            ..
         } => {
             let loaded = load_config(cli.config.as_deref(), cwd)?;
             let languages = Languages::new(&loaded.config.languages)?;
-            let paths: Vec<_> = paths.iter().map(|path| cwd.join(path)).collect();
-            let files = walk::files(&paths, &loaded.root, &loaded.config, &languages)?;
+            let stdin = paths.iter().any(|path| path.as_os_str() == "-");
+            let paths: Vec<_> = paths
+                .iter()
+                .filter(|path| path.as_os_str() != "-")
+                .map(|path| cwd.join(path))
+                .collect();
+            let mut files = walk::files(&paths, &loaded.root, &loaded.config, &languages)?;
+            if stdin {
+                // The standard input is YAML, as conftest takes it: what `helm
+                // template` prints, piped in.
+                files.push(walk::File {
+                    path: PathBuf::from("-"),
+                    relative: "-".to_owned(),
+                    language: "yaml",
+                });
+            }
             if *show_files {
                 for file in files {
                     writeln!(out, "{:<10} {}", file.language, shown(&file.path, cwd))
                         .map_err(stdout)?;
                 }
+                return Ok(false);
             }
-            return Ok(());
+            let policies = Policies::load(&loaded.root, &loaded.config)?;
+            let checked = check::check(files, &policies)?;
+            let fail_on = match fail_on.as_deref() {
+                Some("warn") => FailOn::Warn,
+                Some(_) => FailOn::Deny,
+                None => loaded.config.fail_on,
+            };
+            return report::text(&checked, cwd, fail_on, out).map_err(stdout);
         }
         Command::Inspect { file } => {
             let loaded = load_config(cli.config.as_deref(), cwd)?;
@@ -152,16 +187,16 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<(), Error> {
                 relative,
                 language,
             };
-            let evaluations = input::evaluations(&file)?;
+            let evaluations = input::evaluations(&file, &input::read(&file)?)?;
             serde_json::to_writer_pretty(&mut *out, &evaluations).map_err(|e| stdout(e.into()))?;
             writeln!(out).map_err(stdout)?;
-            return Ok(());
+            return Ok(false);
         }
         Command::Languages => {
             for language in LANGUAGES {
                 writeln!(out, "{language}").map_err(stdout)?;
             }
-            return Ok(());
+            return Ok(false);
         }
         Command::Lock { .. } => "lock",
     };
@@ -215,7 +250,7 @@ fn render(error: &Error, cwd: &Path) -> String {
 
 /// A path as the user would type it: relative to the working directory when
 /// it is under it.
-fn shown(path: &Path, cwd: &Path) -> String {
+pub(crate) fn shown(path: &Path, cwd: &Path) -> String {
     path.strip_prefix(cwd).unwrap_or(path).display().to_string()
 }
 
