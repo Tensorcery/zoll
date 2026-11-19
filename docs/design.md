@@ -229,8 +229,10 @@ then.
   tree; a node the parser inserted for what the text lacks (`MISSING`) is
   left out, as nothing in the file is there to point at;
 - columns count Unicode code points, as everywhere in zoll;
-- a tree nested deeper than 512 is refused: the file gets a `zoll.parse`
-  warning.
+- a tree nested deeper than 512, or whose text is more than 64 times the
+  file's size (at least 1 MiB is allowed), is refused: the file gets a
+  `zoll.parse` warning. Text on every node would otherwise let a deep file
+  copy itself hundreds of times over.
 
 ```json
 {"type": "program", "text": "ls | awk '{print $1}'\n",
