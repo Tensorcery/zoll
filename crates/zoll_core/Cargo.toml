@@ -18,57 +18,97 @@ base = [
   "bash",
   "c",
   "c_sharp",
+  "cmake",
   "cpp",
   "css",
+  "dart",
   "dockerfile",
+  "elixir",
   "go",
+  "gotmpl",
+  "graphql",
   "groovy",
+  "haskell",
   "hcl",
   "html",
+  "ini",
   "java",
   "javascript",
   "jq",
+  "jsonnet",
+  "just",
   "kotlin",
+  "lua",
   "make",
   "markdown",
+  "nginx",
+  "nix",
+  "perl",
   "php",
   "powershell",
+  "proto",
   "python",
+  "regex",
   "ruby",
   "rust",
+  "scala",
+  "scss",
   "sql",
+  "starlark",
+  "svelte",
   "swift",
   "tsx",
   "typescript",
   "xml",
+  "zig",
 ]
 awk = ["zoll_grammars/awk"]
 bash = ["dep:tree-sitter-bash"]
 c = ["dep:tree-sitter-c"]
 c_sharp = ["dep:tree-sitter-c-sharp"]
+cmake = ["dep:tree-sitter-cmake"]
 cpp = ["dep:tree-sitter-cpp"]
 css = ["dep:tree-sitter-css"]
+dart = ["dep:tree-sitter-dart"]
 dockerfile = ["dep:tree-sitter-containerfile"]
+elixir = ["dep:tree-sitter-elixir"]
 go = ["dep:tree-sitter-go"]
+gotmpl = ["zoll_grammars/gotmpl"]
+graphql = ["dep:tree-sitter-graphql"]
 groovy = ["dep:tree-sitter-groovy"]
+haskell = ["dep:tree-sitter-haskell"]
 hcl = ["dep:tree-sitter-hcl"]
 html = ["dep:tree-sitter-html"]
+ini = ["dep:tree-sitter-ini"]
 java = ["dep:tree-sitter-java"]
 javascript = ["dep:tree-sitter-javascript"]
 jq = ["zoll_grammars/jq"]
+jsonnet = ["dep:tree-sitter-jsonnet"]
+just = ["zoll_grammars/just"]
 kotlin = ["dep:tree-sitter-kotlin-ng"]
+lua = ["dep:tree-sitter-lua"]
 make = ["dep:tree-sitter-make"]
 markdown = ["dep:tree-sitter-md"]
+nginx = ["dep:tree-sitter-nginx"]
+nix = ["dep:tree-sitter-nix"]
+perl = ["zoll_grammars/perl"]
 php = ["dep:tree-sitter-php"]
 powershell = ["dep:tree-sitter-powershell"]
+proto = ["dep:tree-sitter-proto"]
 python = ["dep:tree-sitter-python"]
+regex = ["dep:tree-sitter-regex"]
 ruby = ["dep:tree-sitter-ruby"]
 rust = ["dep:tree-sitter-rust"]
+scala = ["dep:tree-sitter-scala"]
+scss = ["zoll_grammars/scss"]
 sql = ["dep:tree-sitter-sequel"]
+starlark = ["dep:tree-sitter-starlark"]
+svelte = ["dep:tree-sitter-svelte-ng"]
 swift = ["dep:tree-sitter-swift"]
 tsx = ["dep:tree-sitter-typescript"]
 typescript = ["dep:tree-sitter-typescript"]
 xml = ["dep:tree-sitter-xml"]
+zig = ["dep:tree-sitter-zig"]
 
 [dependencies]
 globset.workspace = true
@@ -83,27 +123,43 @@ tree-sitter.workspace = true
 tree-sitter-bash = { workspace = true, optional = true }
 tree-sitter-c = { workspace = true, optional = true }
 tree-sitter-c-sharp = { workspace = true, optional = true }
+tree-sitter-cmake = { workspace = true, optional = true }
 tree-sitter-containerfile = { workspace = true, optional = true }
 tree-sitter-cpp = { workspace = true, optional = true }
 tree-sitter-css = { workspace = true, optional = true }
+tree-sitter-dart = { workspace = true, optional = true }
+tree-sitter-elixir = { workspace = true, optional = true }
 tree-sitter-go = { workspace = true, optional = true }
+tree-sitter-graphql = { workspace = true, optional = true }
 tree-sitter-groovy = { workspace = true, optional = true }
+tree-sitter-haskell = { workspace = true, optional = true }
 tree-sitter-hcl = { workspace = true, optional = true }
 tree-sitter-html = { workspace = true, optional = true }
+tree-sitter-ini = { workspace = true, optional = true }
 tree-sitter-java = { workspace = true, optional = true }
 tree-sitter-javascript = { workspace = true, optional = true }
+tree-sitter-jsonnet = { workspace = true, optional = true }
 tree-sitter-kotlin-ng = { workspace = true, optional = true }
+tree-sitter-lua = { workspace = true, optional = true }
 tree-sitter-make = { workspace = true, optional = true }
 tree-sitter-md = { workspace = true, optional = true }
+tree-sitter-nginx = { workspace = true, optional = true }
+tree-sitter-nix = { workspace = true, optional = true }
 tree-sitter-php = { workspace = true, optional = true }
 tree-sitter-powershell = { workspace = true, optional = true }
+tree-sitter-proto = { workspace = true, optional = true }
 tree-sitter-python = { workspace = true, optional = true }
+tree-sitter-regex = { workspace = true, optional = true }
 tree-sitter-ruby = { workspace = true, optional = true }
 tree-sitter-rust = { workspace = true, optional = true }
+tree-sitter-scala = { workspace = true, optional = true }
 tree-sitter-sequel = { workspace = true, optional = true }
+tree-sitter-starlark = { workspace = true, optional = true }
+tree-sitter-svelte-ng = { workspace = true, optional = true }
 tree-sitter-swift = { workspace = true, optional = true }
 tree-sitter-typescript = { workspace = true, optional = true }
 tree-sitter-xml = { workspace = true, optional = true }
+tree-sitter-zig = { workspace = true, optional = true }
 zoll_grammars.workspace = true
 
 [lints]

@@ -42,6 +42,11 @@ fn grammar(language: &str) -> Option<(Language, &'static str)> {
             tree_sitter_c_sharp::LANGUAGE.into(),
             tree_sitter_c_sharp::NODE_TYPES,
         )),
+        #[cfg(feature = "cmake")]
+        "cmake" => Some((
+            tree_sitter_cmake::LANGUAGE.into(),
+            tree_sitter_cmake::NODE_TYPES,
+        )),
         #[cfg(feature = "cpp")]
         "cpp" => Some((
             tree_sitter_cpp::LANGUAGE.into(),
@@ -52,17 +57,42 @@ fn grammar(language: &str) -> Option<(Language, &'static str)> {
             tree_sitter_css::LANGUAGE.into(),
             tree_sitter_css::NODE_TYPES,
         )),
+        #[cfg(feature = "dart")]
+        "dart" => Some((
+            tree_sitter_dart::LANGUAGE.into(),
+            tree_sitter_dart::NODE_TYPES,
+        )),
         #[cfg(feature = "dockerfile")]
         "dockerfile" => Some((
             tree_sitter_containerfile::LANGUAGE.into(),
             tree_sitter_containerfile::NODE_TYPES,
         )),
+        #[cfg(feature = "elixir")]
+        "elixir" => Some((
+            tree_sitter_elixir::LANGUAGE.into(),
+            tree_sitter_elixir::NODE_TYPES,
+        )),
         #[cfg(feature = "go")]
         "go" => Some((tree_sitter_go::LANGUAGE.into(), tree_sitter_go::NODE_TYPES)),
+        #[cfg(feature = "gotmpl")]
+        "gotmpl" => Some((
+            zoll_grammars::GOTMPL.into(),
+            zoll_grammars::GOTMPL_NODE_TYPES,
+        )),
+        #[cfg(feature = "graphql")]
+        "graphql" => Some((
+            tree_sitter_graphql::LANGUAGE.into(),
+            tree_sitter_graphql::NODE_TYPES,
+        )),
         #[cfg(feature = "groovy")]
         "groovy" => Some((
             tree_sitter_groovy::LANGUAGE.into(),
             tree_sitter_groovy::NODE_TYPES,
+        )),
+        #[cfg(feature = "haskell")]
+        "haskell" => Some((
+            tree_sitter_haskell::LANGUAGE.into(),
+            tree_sitter_haskell::NODE_TYPES,
         )),
         #[cfg(feature = "hcl")]
         "hcl" => Some((
@@ -73,6 +103,11 @@ fn grammar(language: &str) -> Option<(Language, &'static str)> {
         "html" => Some((
             tree_sitter_html::LANGUAGE.into(),
             tree_sitter_html::NODE_TYPES,
+        )),
+        #[cfg(feature = "ini")]
+        "ini" => Some((
+            tree_sitter_ini::LANGUAGE.into(),
+            tree_sitter_ini::NODE_TYPES,
         )),
         #[cfg(feature = "java")]
         "java" => Some((
@@ -86,10 +121,22 @@ fn grammar(language: &str) -> Option<(Language, &'static str)> {
         )),
         #[cfg(feature = "jq")]
         "jq" => Some((zoll_grammars::JQ.into(), zoll_grammars::JQ_NODE_TYPES)),
+        #[cfg(feature = "jsonnet")]
+        "jsonnet" => Some((
+            tree_sitter_jsonnet::LANGUAGE.into(),
+            tree_sitter_jsonnet::NODE_TYPES,
+        )),
+        #[cfg(feature = "just")]
+        "just" => Some((zoll_grammars::JUST.into(), zoll_grammars::JUST_NODE_TYPES)),
         #[cfg(feature = "kotlin")]
         "kotlin" => Some((
             tree_sitter_kotlin_ng::LANGUAGE.into(),
             tree_sitter_kotlin_ng::NODE_TYPES,
+        )),
+        #[cfg(feature = "lua")]
+        "lua" => Some((
+            tree_sitter_lua::LANGUAGE.into(),
+            tree_sitter_lua::NODE_TYPES,
         )),
         #[cfg(feature = "make")]
         "make" => Some((
@@ -101,6 +148,18 @@ fn grammar(language: &str) -> Option<(Language, &'static str)> {
             tree_sitter_md::LANGUAGE.into(),
             tree_sitter_md::NODE_TYPES_BLOCK,
         )),
+        #[cfg(feature = "nginx")]
+        "nginx" => Some((
+            tree_sitter_nginx::LANGUAGE.into(),
+            tree_sitter_nginx::NODE_TYPES,
+        )),
+        #[cfg(feature = "nix")]
+        "nix" => Some((
+            tree_sitter_nix::LANGUAGE.into(),
+            tree_sitter_nix::NODE_TYPES,
+        )),
+        #[cfg(feature = "perl")]
+        "perl" => Some((zoll_grammars::PERL.into(), zoll_grammars::PERL_NODE_TYPES)),
         #[cfg(feature = "php")]
         "php" => Some((
             tree_sitter_php::LANGUAGE_PHP.into(),
@@ -111,10 +170,20 @@ fn grammar(language: &str) -> Option<(Language, &'static str)> {
             tree_sitter_powershell::LANGUAGE.into(),
             tree_sitter_powershell::NODE_TYPES,
         )),
+        #[cfg(feature = "proto")]
+        "proto" => Some((
+            tree_sitter_proto::LANGUAGE.into(),
+            tree_sitter_proto::NODE_TYPES,
+        )),
         #[cfg(feature = "python")]
         "python" => Some((
             tree_sitter_python::LANGUAGE.into(),
             tree_sitter_python::NODE_TYPES,
+        )),
+        #[cfg(feature = "regex")]
+        "regex" => Some((
+            tree_sitter_regex::LANGUAGE.into(),
+            tree_sitter_regex::NODE_TYPES,
         )),
         #[cfg(feature = "ruby")]
         "ruby" => Some((
@@ -126,10 +195,27 @@ fn grammar(language: &str) -> Option<(Language, &'static str)> {
             tree_sitter_rust::LANGUAGE.into(),
             tree_sitter_rust::NODE_TYPES,
         )),
+        #[cfg(feature = "scala")]
+        "scala" => Some((
+            tree_sitter_scala::LANGUAGE.into(),
+            tree_sitter_scala::NODE_TYPES,
+        )),
+        #[cfg(feature = "scss")]
+        "scss" => Some((zoll_grammars::SCSS.into(), zoll_grammars::SCSS_NODE_TYPES)),
         #[cfg(feature = "sql")]
         "sql" => Some((
             tree_sitter_sequel::LANGUAGE.into(),
             tree_sitter_sequel::NODE_TYPES,
+        )),
+        #[cfg(feature = "starlark")]
+        "starlark" => Some((
+            tree_sitter_starlark::LANGUAGE.into(),
+            tree_sitter_starlark::NODE_TYPES,
+        )),
+        #[cfg(feature = "svelte")]
+        "svelte" => Some((
+            tree_sitter_svelte_ng::LANGUAGE.into(),
+            tree_sitter_svelte_ng::NODE_TYPES,
         )),
         #[cfg(feature = "swift")]
         "swift" => Some((
@@ -150,6 +236,11 @@ fn grammar(language: &str) -> Option<(Language, &'static str)> {
         "xml" => Some((
             tree_sitter_xml::LANGUAGE_XML.into(),
             tree_sitter_xml::XML_NODE_TYPES,
+        )),
+        #[cfg(feature = "zig")]
+        "zig" => Some((
+            tree_sitter_zig::LANGUAGE.into(),
+            tree_sitter_zig::NODE_TYPES,
         )),
         _ => None,
     }
@@ -195,17 +286,20 @@ static MULTIPLE: LazyLock<HashMap<&'static str, OnceLock<Multiple>>> =
 
 static NONE: LazyLock<Multiple> = LazyLock::new(Multiple::new);
 
+/// A node type of `node-types.json`, as far as zoll reads it.
+#[derive(Deserialize)]
+struct NodeType {
+    r#type: String,
+    #[serde(default)]
+    fields: HashMap<String, Field>,
+}
+
+#[derive(Deserialize)]
+struct Field {
+    multiple: bool,
+}
+
 fn multiple(language: &str, node_types: &str) -> &'static Multiple {
-    #[derive(Deserialize)]
-    struct NodeType {
-        r#type: String,
-        #[serde(default)]
-        fields: HashMap<String, Field>,
-    }
-    #[derive(Deserialize)]
-    struct Field {
-        multiple: bool,
-    }
     let Some(cell) = MULTIPLE.get(language) else {
         return &NONE;
     };

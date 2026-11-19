@@ -1,7 +1,14 @@
 //! Compiles the vendored grammars the enabled features name.
 
 fn main() {
-    for (feature, scanner) in [("awk", true), ("jq", false)] {
+    for (feature, scanner) in [
+        ("awk", true),
+        ("gotmpl", false),
+        ("jq", false),
+        ("just", true),
+        ("perl", true),
+        ("scss", true),
+    ] {
         if std::env::var_os(format!("CARGO_FEATURE_{}", feature.to_uppercase())).is_none() {
             continue;
         }

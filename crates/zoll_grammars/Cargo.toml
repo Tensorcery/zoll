@@ -1,10 +1,10 @@
 [package]
 name = "zoll_grammars"
-description = "The tree-sitter grammars zoll vendors: those with no crate under a permissive license"
+description = "The tree-sitter grammars zoll vendors: those with no crate it can use"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-license = "MIT AND BSD-3-Clause"
+license = "MIT AND BSD-3-Clause AND Apache-2.0"
 repository.workspace = true
 authors.workspace = true
 publish = false
@@ -12,7 +12,11 @@ include = ["build.rs", "src/", "vendor/"]
 
 [features]
 awk = []
+gotmpl = []
 jq = []
+just = []
+perl = []
+scss = []
 
 [dependencies]
 tree-sitter-language.workspace = true
