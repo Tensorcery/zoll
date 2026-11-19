@@ -143,9 +143,10 @@ of its info string.
 
 - Grammars are compiled in, never downloaded. Each comes from its own crate
   on crates.io (`tree-sitter-bash`, `tree-sitter-python`, ...), pinned in
-  `Cargo.lock` and checked by `cargo deny`; a grammar with no crate under a
-  permissive license is vendored in `crates/zoll_grammars/` with its source
-  and revision (awk, jq). dockerfile is `tree-sitter-containerfile`, sql is
+  `Cargo.lock` and checked by `cargo deny`; a grammar with no crate zoll can
+  use (none under a permissive license, or one that binds an older
+  tree-sitter) is vendored in `crates/zoll_grammars/` with its source and
+  revision: awk, gotmpl, jq, just, perl, scss. dockerfile is `tree-sitter-containerfile`, sql is
   `tree-sitter-sequel`, markdown is the block grammar of `tree-sitter-md`.
   tree-sitter-language-pack was the first idea and was dropped: its build
   downloads the grammar sources from a release and checks them against a hash
@@ -154,15 +155,19 @@ of its info string.
   no grammar.
 - Each language is a Cargo feature of its name; `base` is the set below and
   is the default.
-- `zoll-lint` (PyPI) carries the binary with the base set, about 25
-  languages:
-  - data and config: yaml, json, toml, xml, hcl, dockerfile;
-  - shell and the languages shell holds: bash, powershell, make, awk, jq;
-  - groovy (Jenkinsfile);
-  - web: javascript, typescript, tsx, html, css;
-  - general: python, go, rust, java, kotlin, c, cpp, c_sharp, php, ruby,
-    swift;
-  - other: sql, markdown.
+- `zoll-lint` (PyPI) carries the binary with the base set, 50 languages:
+  - data and config: yaml, json, toml, xml, hcl, dockerfile, ini, nginx,
+    proto, graphql, jsonnet, nix;
+  - build: make, cmake, starlark (Bazel, Tilt), just, groovy (Jenkinsfile);
+  - templates: gotmpl (Helm charts are Go templates);
+  - shell and the languages shell holds: bash, powershell, awk, jq, perl,
+    lua;
+  - web: javascript, typescript, tsx, html, css, scss, svelte;
+  - general: python, go, rust, java, kotlin, scala, c, cpp, c_sharp, php,
+    ruby, swift, dart, elixir, haskell, zig;
+  - other: sql, markdown, regex (for the code embedded in others).
+- Left for `full` as too heavy for what they bring here: ocaml (12 MiB),
+  julia (6), objc (5), and r, erlang, solidity.
 - `zoll-lint[full]` adds one package with every other grammar as shared
   libraries installed under `<prefix>/share/zoll/grammars/`. The binary,
   at `<prefix>/bin/zoll`, looks in `../share/zoll/grammars/` at start. If one
@@ -173,10 +178,12 @@ of its info string.
   naming the languages. zoll is not published on crates.io: `queries/` sits
   outside the crates, and a published crate carries only its own directory.
 - `zoll languages` lists what this installation can parse.
-- The release binary with the base set is 54 MiB (56,815,696 bytes; 6.5 MiB
+- The release binary with the base set is 70 MiB (73,241,040 bytes; 8.0 MiB
   gzipped), 7.6 MiB without any grammar (x86_64 Linux, rustc 1.100, thin LTO,
-  stripped; measured at stage 4). The grammars are most of it: sql 12.7 MiB,
-  c_sharp 6.9, swift 3.9, kotlin 3.3, cpp 3.2, typescript and tsx 2.7.
+  stripped). The grammars are most of it: sql 12.7 MiB, c_sharp 6.9, scala
+  4.3, swift 3.9, haskell 3.7, kotlin 3.3, cpp 3.2, typescript and tsx 2.7;
+  most of the rest are under 1 MiB each. With the first 30 languages it was
+  54 MiB.
 
 ## 8. The input model *(public API)*
 
@@ -516,6 +523,9 @@ discussed with the owner; they are the author's calls, open to correction.
 6. Grammars come from their own crates on crates.io, and awk and jq are
    vendored, instead of tree-sitter-language-pack (7). Found while building
    stage 4.
+7. The base set is 50 languages, not about 25: the binary grows from 54 to
+   70 MiB (8 MiB gzipped), far under PyPI's limit, and a pre-commit tool
+   finds the files a repository has without an extra to install (7).
 
 ## 16. Left to the builder
 

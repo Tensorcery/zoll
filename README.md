@@ -83,7 +83,7 @@ Policies from git are pinned to their commit in `zoll.lock`; `zoll lock
 ## Install
 
 ```bash
-uv tool install zoll-lint          # about 25 common languages
+uv tool install zoll-lint          # 50 common languages
 uv tool install 'zoll-lint[full]'  # every other grammar zoll has
 ```
 

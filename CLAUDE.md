@@ -32,7 +32,7 @@ language → every violation mapped back to `file:line:col` of the real file.
 |---|---|
 | `crates/zoll/` | the command: arguments, output; a thin layer over `zoll_core` |
 | `crates/zoll_core/` | the engine: files, languages, fragments, policy evaluation |
-| `crates/zoll_grammars/` | the grammars with no crate under a permissive license, vendored (`vendor/README.md`) |
+| `crates/zoll_grammars/` | the grammars with no crate zoll can use, vendored (`vendor/README.md`) |
 | `queries/<language>/injections.scm` | where a language holds code of another (tree-sitter queries) |
 | `crates/zoll/tests/cli/` | the command run as a user runs it; `snapshots/` is insta's expected output |
 | `crates/zoll/tests/corpus/` | real files, each with the document conftest parses it into (`*.conftest.json`) |

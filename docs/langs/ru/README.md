@@ -84,7 +84,7 @@ data = ["policy/data/"]
 ## Установка
 
 ```bash
-uv tool install zoll-lint          # около 25 популярных языков
+uv tool install zoll-lint          # 50 популярных языков
 uv tool install 'zoll-lint[full]'  # все остальные грамматики zoll
 ```
 
