@@ -10,8 +10,8 @@ exit_code: 2
 ----- stdout -----
 
 ----- stderr -----
-error: [REPO]/zoll.toml: TOML parse error at line 1, column 11
+error: unknown variant `error`
+ --> zoll.toml:1:11
   |
 1 | fail-on = "error"
-  |           ^^^^^^^
-unknown variant `error`, expected `deny` or `warn`
+  |           ^^^^^^^ expected `deny` or `warn`

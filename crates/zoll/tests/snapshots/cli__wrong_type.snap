@@ -10,8 +10,8 @@ exit_code: 2
 ----- stdout -----
 
 ----- stderr -----
-error: [REPO]/zoll.toml: TOML parse error at line 1, column 12
+error: invalid type: string "policy/"
+ --> zoll.toml:1:12
   |
 1 | policies = "policy/"
-  |            ^^^^^^^^^
-invalid type: string "policy/", expected a sequence
+  |            ^^^^^^^^^ expected an array

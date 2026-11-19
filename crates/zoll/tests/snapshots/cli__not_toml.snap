@@ -10,8 +10,8 @@ exit_code: 2
 ----- stdout -----
 
 ----- stderr -----
-error: [REPO]/zoll.toml: TOML parse error at line 1, column 13
+error: unclosed array
+ --> zoll.toml:1:13
   |
 1 | policies = [
-  |             ^
-unclosed array, expected `]`
+  |             ^ expected `]`

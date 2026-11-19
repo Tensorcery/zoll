@@ -10,8 +10,8 @@ exit_code: 2
 ----- stdout -----
 
 ----- stderr -----
-error: [REPO]/zoll.toml: TOML parse error at line 1, column 1
+error: unknown field `parent`
+ --> [REPO]/zoll.toml:1:1
   |
 1 | parent = 1
-  | ^^^^^^
-unknown field `parent`, expected one of `include`, `exclude`, `policies`, `data`, `fail-on`, `rego-version`, `packages`, `languages`, `per-file-ignores`
+  | ^^^^^^ expected one of `include`, `exclude`, `policies`, `data`, `fail-on`, `rego-version`, `packages`, `languages`, `per-file-ignores`
