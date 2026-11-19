@@ -13,7 +13,7 @@ runs your Rego policies over all of it.
 
 > **Status: design.** The engine is not written yet; what follows is the
 > agreed interface ([docs/design.md](docs/design.md)). Today the binary
-> answers `--help` and `--version` only.
+> reads and checks its config, and runs no policy yet.
 
 ## How it works
 

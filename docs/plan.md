@@ -13,15 +13,16 @@ YAML policies.
 
 ## 1. Command line and configuration
 
-- [ ] `zoll check`, `inspect`, `lock`, `languages` exist with their flags
+- [x] `zoll check`, `inspect`, `lock`, `languages` exist with their flags
       (section 11); each one not built yet says so and exits 2
-- [ ] `--version`, `--help`, `--config`, `--color` work
-- [ ] the config is found as ruff finds its own: `zoll.toml`, `.zoll.toml`,
+- [x] `--version`, `--help`, `--config`, `--color` work
+- [x] the config is found as ruff finds its own: `zoll.toml`, `.zoll.toml`,
       `[tool.zoll]` in `pyproject.toml`, from the working directory up
-- [ ] every field of section 9 is parsed; an unknown field or a wrong type
+- [x] every field of section 9 is parsed; an unknown field or a wrong type
       is an error naming the file, the field and what was expected
-- [ ] exit codes 0 / 1 / 2 as section 11 says
-- [ ] snapshot tests for each command's output and for each config error
+- [x] exit codes 0 / 1 / 2 as section 11 says (1 waits for violations,
+      stage 3)
+- [x] snapshot tests for each command's output and for each config error
 
 **Checkpoint:** `zoll check` in a repository with a broken `zoll.toml`
 prints where it is broken and exits 2; with a valid one it exits 0.

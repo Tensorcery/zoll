@@ -277,7 +277,10 @@ are what suppression, the reports and SARIF's `ruleId` use.
 
 Found as ruff finds its own: `zoll.toml`, `.zoll.toml`, or `[tool.zoll]` in
 `pyproject.toml`, searched from the working directory up. `--config` names
-one.
+one. In one directory `.zoll.toml` comes before `zoll.toml`, and both before
+`pyproject.toml`; a `pyproject.toml` without `[tool.zoll]` is passed over.
+`zoll.toml` and `.zoll.toml` hold the fields at the top level, without the
+`[tool.zoll]` header the example below has.
 
 ```toml
 [tool.zoll]
