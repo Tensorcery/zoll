@@ -44,6 +44,7 @@ exit_code: 0
                     "column": 4,
                     "line": 1
                   },
+                  "text": "then",
                   "type": "command_name"
                 }
               },
@@ -51,6 +52,7 @@ exit_code: 0
                 "column": 4,
                 "line": 1
               },
+              "text": "then",
               "type": "command"
             }
           ],
@@ -62,6 +64,7 @@ exit_code: 0
             "column": 1,
             "line": 1
           },
+          "text": "if then\n",
           "type": "ERROR"
         }
       ],
@@ -73,6 +76,7 @@ exit_code: 0
         "column": 1,
         "line": 1
       },
+      "text": "if then\n",
       "type": "program"
     },
     "data": {

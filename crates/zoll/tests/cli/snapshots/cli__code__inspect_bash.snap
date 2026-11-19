@@ -44,6 +44,7 @@ exit_code: 0
                     "column": 1,
                     "line": 1
                   },
+                  "text": "ls",
                   "type": "command_name"
                 }
               },
@@ -51,6 +52,7 @@ exit_code: 0
                 "column": 1,
                 "line": 1
               },
+              "text": "ls",
               "type": "command"
             },
             {
@@ -96,6 +98,7 @@ exit_code: 0
                     "column": 6,
                     "line": 1
                   },
+                  "text": "awk",
                   "type": "command_name"
                 }
               },
@@ -103,6 +106,7 @@ exit_code: 0
                 "column": 6,
                 "line": 1
               },
+              "text": "awk '{print $1}'",
               "type": "command"
             }
           ],
@@ -114,6 +118,7 @@ exit_code: 0
             "column": 1,
             "line": 1
           },
+          "text": "ls | awk '{print $1}'",
           "type": "pipeline"
         }
       ],
@@ -125,6 +130,7 @@ exit_code: 0
         "column": 1,
         "line": 1
       },
+      "text": "ls | awk '{print $1}'\n",
       "type": "program"
     },
     "data": {

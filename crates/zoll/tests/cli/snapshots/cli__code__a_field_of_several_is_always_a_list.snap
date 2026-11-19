@@ -56,6 +56,7 @@ exit_code: 0
                 "column": 1,
                 "line": 1
               },
+              "text": "echo",
               "type": "command_name"
             }
           },
@@ -63,6 +64,7 @@ exit_code: 0
             "column": 1,
             "line": 1
           },
+          "text": "echo hi",
           "type": "command"
         }
       ],
@@ -74,6 +76,7 @@ exit_code: 0
         "column": 1,
         "line": 1
       },
+      "text": "echo hi\n",
       "type": "program"
     },
     "data": {

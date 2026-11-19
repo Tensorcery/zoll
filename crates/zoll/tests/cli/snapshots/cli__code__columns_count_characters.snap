@@ -80,6 +80,7 @@ exit_code: 0
                     "column": 5,
                     "line": 1
                   },
+                  "text": "\"ёж\"",
                   "type": "string"
                 }
               },
@@ -87,6 +88,7 @@ exit_code: 0
                 "column": 1,
                 "line": 1
               },
+              "text": "s = \"ёж\"",
               "type": "assignment"
             }
           ],
@@ -98,6 +100,7 @@ exit_code: 0
             "column": 1,
             "line": 1
           },
+          "text": "s = \"ёж\"",
           "type": "expression_statement"
         },
         {
@@ -137,6 +140,7 @@ exit_code: 0
                 "column": 11,
                 "line": 1
               },
+              "text": "n = 1",
               "type": "assignment"
             }
           ],
@@ -148,6 +152,7 @@ exit_code: 0
             "column": 11,
             "line": 1
           },
+          "text": "n = 1",
           "type": "expression_statement"
         }
       ],
@@ -159,6 +164,7 @@ exit_code: 0
         "column": 1,
         "line": 1
       },
+      "text": "s = \"ёж\"; n = 1\n",
       "type": "module"
     },
     "data": {

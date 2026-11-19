@@ -13,6 +13,22 @@ fn inspect_bash() -> TestResult {
 }
 
 #[test]
+fn every_node_has_its_text() -> TestResult {
+    // A policy reads a node's text without knowing how its grammar nests
+    // it: bash's `command_name` holds a `word`, Python's `string` three
+    // parts.
+    let repo = Repo::new(&[
+        (
+            "policy/python.rego",
+            "package python\n\ndeny_secret contains {\"msg\": \"a password in the code\", \"at\": node} if {\n\twalk(input, [_, node])\n\tnode.type == \"string\"\n\tnode.text == \"\\\"hunter2\\\"\"\n}\n",
+        ),
+        ("a.py", "user = \"admin\"\npassword = \"hunter2\"\n"),
+    ])?;
+    assert_cmd_snapshot!(repo.zoll("").arg("check"));
+    Ok(())
+}
+
+#[test]
 fn a_field_of_several_is_always_a_list() -> TestResult {
     // `argument` may repeat in bash's grammar: a list even with one; `name`
     // may not: an object.
@@ -51,7 +67,7 @@ deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
 	node.type == "pipeline"
 	some cmd in node.children
 	cmd.type == "command"
-	cmd.fields.name.children[0].text == "curl"
+	cmd.fields.name.text == "curl"
 }
 "#;
 
