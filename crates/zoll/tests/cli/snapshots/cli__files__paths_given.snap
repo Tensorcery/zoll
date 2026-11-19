@@ -1,0 +1,18 @@
+---
+source: crates/zoll/tests/cli/files.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--show-files"
+    - src
+    - vendor/d.yml
+---
+success: true
+exit_code: 0
+----- stdout -----
+yaml       src/b.yml
+json       src/c.json
+yaml       vendor/d.yml
+
+----- stderr -----

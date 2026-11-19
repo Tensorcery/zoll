@@ -1,0 +1,54 @@
+---
+source: crates/zoll/tests/cli/inspect.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - a.yml
+---
+success: true
+exit_code: 0
+----- stdout -----
+[
+  {
+    "input": {
+      "T": true,
+      "custom_tag": "value",
+      "date": "2024-01-01",
+      "empty": null,
+      "exponent": 1000.0,
+      "float": 1.5,
+      "hex": 31,
+      "int": 42,
+      "int_tag": 42,
+      "leading_zero": 17,
+      "negative": -7,
+      "null_word": null,
+      "octal": 15,
+      "off": "y",
+      "on": "push",
+      "quoted": "true",
+      "str_tag": "42",
+      "t": true,
+      "tilde": null,
+      "version": 1.1,
+      "yes": "no"
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "a.yml"
+        }
+      },
+      "zoll": {
+        "file": {
+          "language": "yaml",
+          "path": "a.yml"
+        }
+      }
+    }
+  }
+]
+
+----- stderr -----

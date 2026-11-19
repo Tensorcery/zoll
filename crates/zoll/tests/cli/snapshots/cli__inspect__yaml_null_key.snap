@@ -1,0 +1,18 @@
+---
+source: crates/zoll/tests/cli/inspect.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - a.yml
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: a null key has no place in a JSON object
+ --> a.yml:2:1
+  |
+2 | ~: 2
+  | ^

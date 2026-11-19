@@ -1,0 +1,13 @@
+---
+source: crates/zoll/tests/cli/commands.rs
+info:
+  program: zoll
+  args:
+    - "--version"
+---
+success: true
+exit_code: 0
+----- stdout -----
+zoll 0.0.0
+
+----- stderr -----

@@ -1,0 +1,14 @@
+---
+source: crates/zoll/tests/cli/inspect.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - notes.txt
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: notes.txt: no language is known for this file; name one in the config's `languages` table

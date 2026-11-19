@@ -1,0 +1,24 @@
+{
+  "annotations": {
+    "1": "numeric key",
+    "prometheus.io/scrape": "true"
+  },
+  "big": 1000,
+  "empty": null,
+  "hex": 31,
+  "image": {
+    "pullPolicy": "IfNotPresent",
+    "repository": "nginx",
+    "tag": ""
+  },
+  "nameOverride": null,
+  "nodeSelector": {},
+  "octal": 15,
+  "ratio": 0.5,
+  "replicaCount": 1,
+  "service": {
+    "port": 80,
+    "type": "ClusterIP"
+  },
+  "tolerations": []
+}

@@ -1,0 +1,14 @@
+---
+source: crates/zoll/tests/cli/files.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--show-files"
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: the config binds `*.conf` to `yml`, which is no language zoll knows; `zoll languages` lists them

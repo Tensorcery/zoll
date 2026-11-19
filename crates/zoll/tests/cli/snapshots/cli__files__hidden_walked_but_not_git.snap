@@ -1,0 +1,15 @@
+---
+source: crates/zoll/tests/cli/files.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--show-files"
+---
+success: true
+exit_code: 0
+----- stdout -----
+yaml       .github/workflows/ci.yml
+yaml       .pre-commit-config.yaml
+
+----- stderr -----

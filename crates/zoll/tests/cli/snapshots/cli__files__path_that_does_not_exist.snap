@@ -1,0 +1,15 @@
+---
+source: crates/zoll/tests/cli/files.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--show-files"
+    - nowhere
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: nowhere: No such file or directory (os error 2)

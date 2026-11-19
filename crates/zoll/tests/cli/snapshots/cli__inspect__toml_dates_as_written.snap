@@ -1,0 +1,37 @@
+---
+source: crates/zoll/tests/cli/inspect.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - a.toml
+---
+success: true
+exit_code: 0
+----- stdout -----
+[
+  {
+    "input": {
+      "day": "1979-05-27",
+      "local": "1979-05-27T07:32:00",
+      "offset": "1979-05-27T07:32:00Z",
+      "time": "07:32:00"
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "a.toml"
+        }
+      },
+      "zoll": {
+        "file": {
+          "language": "toml",
+          "path": "a.toml"
+        }
+      }
+    }
+  }
+]
+
+----- stderr -----

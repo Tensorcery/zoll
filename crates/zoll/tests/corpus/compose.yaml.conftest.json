@@ -1,0 +1,41 @@
+{
+  "services": {
+    "api": {
+      "environment": {
+        "DEBUG": "false",
+        "TZ": "UTC"
+      },
+      "image": "example/api:1.0",
+      "ports": [
+        "8080:8080"
+      ],
+      "restart": "unless-stopped"
+    },
+    "worker": {
+      "command": [
+        "python",
+        "-m",
+        "worker"
+      ],
+      "environment": {
+        "DEBUG": "false",
+        "TZ": "UTC"
+      },
+      "healthcheck": {
+        "interval": "10s",
+        "test": [
+          "CMD-SHELL",
+          "pg_isready || exit 1"
+        ]
+      },
+      "restart": "always"
+    }
+  },
+  "x-common": {
+    "environment": {
+      "DEBUG": "false",
+      "TZ": "UTC"
+    },
+    "restart": "unless-stopped"
+  }
+}

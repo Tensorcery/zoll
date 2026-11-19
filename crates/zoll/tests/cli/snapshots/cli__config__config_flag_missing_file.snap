@@ -1,0 +1,15 @@
+---
+source: crates/zoll/tests/cli/config.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--config"
+    - nowhere.toml
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: nowhere.toml: No such file or directory (os error 2)

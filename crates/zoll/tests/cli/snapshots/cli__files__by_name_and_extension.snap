@@ -1,0 +1,26 @@
+---
+source: crates/zoll/tests/cli/files.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--show-files"
+---
+success: true
+exit_code: 0
+----- stdout -----
+dockerfile Dockerfile
+dockerfile Dockerfile.dev
+groovy     Jenkinsfile
+make       Makefile
+yaml       a.yml
+yaml       b.yaml
+json       c.json
+hcl        main.tf
+toml       pyproject.toml
+bash       run.sh
+python     src/app.py
+rust       src/lib.rs
+tsx        web/index.tsx
+
+----- stderr -----

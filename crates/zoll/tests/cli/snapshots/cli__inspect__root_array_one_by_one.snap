@@ -1,0 +1,53 @@
+---
+source: crates/zoll/tests/cli/inspect.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - a.json
+---
+success: true
+exit_code: 0
+----- stdout -----
+[
+  {
+    "input": {
+      "n": 1
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "a.json"
+        }
+      },
+      "zoll": {
+        "file": {
+          "language": "json",
+          "path": "a.json"
+        }
+      }
+    }
+  },
+  {
+    "input": {
+      "n": 2
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "a.json"
+        }
+      },
+      "zoll": {
+        "file": {
+          "language": "json",
+          "path": "a.json"
+        }
+      }
+    }
+  }
+]
+
+----- stderr -----

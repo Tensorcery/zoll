@@ -1,0 +1,11 @@
+{
+  "dependencies": {},
+  "n": 1.5,
+  "name": "pkg",
+  "nothing": null,
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "version": "1.0.0"
+}

@@ -1,0 +1,18 @@
+---
+source: crates/zoll/tests/cli/inspect.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - a.json
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: trailing comma
+ --> a.json:3:1
+  |
+3 | }
+  | ^

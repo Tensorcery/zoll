@@ -3,6 +3,8 @@ extends: default
 ignore: |
   .venv/
   target/
+  crates/*/tests/corpus/
+  crates/*/tests/fixtures/
 
 rules:
   # The comment says why; a separator line does not need saying.

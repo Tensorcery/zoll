@@ -5,7 +5,8 @@ default_install_hook_types: [pre-commit, pre-push, commit-msg]
 # second time on the message and a third on the push.
 default_stages: [pre-commit]
 
-exclude: ^(\.venv|target)/
+# Test inputs are kept byte for byte as written.
+exclude: ^(\.venv|target|crates/[^/]+/tests/(corpus|fixtures))/
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

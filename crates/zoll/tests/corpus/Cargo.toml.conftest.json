@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "serde": {
+      "features": [
+        "derive"
+      ],
+      "version": "1"
+    }
+  },
+  "package": {
+    "edition": "2024",
+    "name": "demo",
+    "version": "0.1.0"
+  },
+  "profile": {
+    "release": {
+      "codegen-units": 1,
+      "lto": "thin"
+    }
+  }
+}

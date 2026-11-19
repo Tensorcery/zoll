@@ -1,0 +1,59 @@
+[
+  {
+    "apiVersion": "apps/v1",
+    "kind": "Deployment",
+    "metadata": {
+      "labels": {
+        "app": "web",
+        "tier": "frontend"
+      },
+      "name": "web"
+    },
+    "spec": {
+      "replicas": 2,
+      "template": {
+        "spec": {
+          "containers": [
+            {
+              "args": [
+                "echo start\nexec nginx -g 'daemon off;'\n"
+              ],
+              "command": [
+                "/bin/sh",
+                "-c"
+              ],
+              "image": "nginx:1.27",
+              "name": "web",
+              "ports": [
+                {
+                  "containerPort": 80
+                }
+              ],
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "128Mi"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "apiVersion": "v1",
+    "kind": "Service",
+    "metadata": {
+      "name": "web"
+    },
+    "spec": {
+      "ports": [
+        {
+          "port": 80,
+          "targetPort": 8080
+        }
+      ]
+    }
+  }
+]

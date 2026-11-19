@@ -1,0 +1,37 @@
+---
+source: crates/zoll/tests/cli/inspect.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - a.yml
+---
+success: true
+exit_code: 0
+----- stdout -----
+[
+  {
+    "input": {
+      "folded": "one two\n",
+      "keep": "x\n\n",
+      "literal": "one\ntwo\n",
+      "strip": "x"
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "a.yml"
+        }
+      },
+      "zoll": {
+        "file": {
+          "language": "yaml",
+          "path": "a.yml"
+        }
+      }
+    }
+  }
+]
+
+----- stderr -----

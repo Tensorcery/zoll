@@ -1,0 +1,18 @@
+---
+source: crates/zoll/tests/cli/inspect.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - a.yml
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: illegal placement of ':' indicator
+ --> a.yml:3:2
+  |
+3 | c: 3
+  |  ^
