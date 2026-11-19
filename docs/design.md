@@ -1,0 +1,430 @@
+# zoll - design
+
+Status: agreed in discussion on 2026-11-19, before any engine code. The
+sections marked *public API* are what policies and users build on; changing
+them is a major release. Everything else may change between versions.
+
+## 1. Why
+
+Code hidden inside other code or data is read by nothing until it runs: awk
+in a shell string, a script in a YAML `run:`, a `RUN` line in a Dockerfile, a
+container's `command:` in a Kubernetes manifest. No linter and no type
+checker sees it; a lost space, a quote, a status swallowed by a pipe surface
+on the runner or in the cluster.
+
+Today the owner closes part of this with conftest: a Rego policy refuses a
+`run:` longer than one line, so the code has to move to a file that
+shellcheck reads. conftest only sees data formats, though: inside a `.sh`
+file, or inside the string a YAML field holds, it sees nothing.
+
+zoll is a policy engine for files of any language. It tells each file's
+language, parses it - data formats into the document they hold, code into
+its syntax tree - finds the code embedded in it, and evaluates Rego
+policies over all of it, conftest-style.
+
+## 2. Goals, non-goals, anti-goals
+
+Goals:
+
+- Any file, any language: data formats as conftest reads them, code through
+  tree-sitter, and the code embedded in either, to any depth.
+- Rego policies; an existing conftest policy runs with no edit to its file
+  (one line of config binds its package to a language, 8.4).
+- Every violation printed as `file:line:col` of the real file, also when it
+  sits in a fragment inside a fragment.
+- Fast: in-process parsing and evaluation, parallel over files, no process
+  spawned per file. It runs in pre-commit and on every push.
+- Installed by `uv tool install zoll-lint` (command `zoll`), one binary.
+
+Non-goals:
+
+- Semantic code analysis: data flow, taint, types, call graphs. Semgrep and
+  the language's own linters own that; zoll does not compete there.
+- Shipping opinions. The engine holds no policies; policy sets live in their
+  own repositories (first one: `Tensorcery/zoll-policies`, set
+  `embedded-code`).
+- Fixing code. zoll reports; it does not rewrite.
+- Guessing a string's language from its content. An embedded fragment is
+  found by where it sits, never by what it looks like.
+
+Anti-goals - it fails even if it works when:
+
+- an existing conftest policy needs its file edited to run;
+- a violation points at a line inside a fragment instead of the real file;
+- adding a language means writing Rust for that language;
+- a policy set changes under a user without a visible diff in their
+  repository.
+
+## 3. Where it stands among existing tools
+
+- conftest, Trivy, Checkov, Regula: policies over data formats and IaC. They
+  do not parse code; a `RUN` line or a `run:` value is a string to them.
+- Semgrep / Opengrep, ast-grep, GritQL: many languages, embedded code
+  (Semgrep's `metavariable-pattern` with `language`, ast-grep's
+  `languageInjections`), but rules are code patterns in their own DSL, not
+  Rego, and free Semgrep sees one file at a time.
+- goast: Go AST as JSON under Rego - one language, its own parser.
+
+zoll's place: one policy language, Rego, for configs, for code, and for the
+code inside configs; conftest-compatible; facts from external data
+combined in one rule, and later from several files (a `--combine` mode,
+section 15). Rules about code alone ("no `eval`")
+stay with Semgrep and the language linters.
+
+## 4. Approaches considered
+
+| Approach | Trade-off | Outcome |
+|---|---|---|
+| Rust, tree-sitter in process, regorus (Rego in Rust) in process | fastest, one binary, maturin to PyPI like ruff/uv/zizmor; regorus is 0.x and not the reference OPA | **chosen** |
+| Go, reference OPA, tree-sitter through cgo | full OPA compatibility; cgo complicates cross-builds and the wheel | rejected |
+| Python, tree-sitter-language-pack, `opa` as a subprocess | simplest to write; a process per file and tree-to-JSON in Python are too slow for a pre-commit tool | rejected: speed |
+| Grammars downloaded at first run (language-pack's default) | small binary; network at runtime, the cache becomes a security boundary | rejected; extra grammars come as PyPI packages instead (section 7) |
+
+## 5. Architecture
+
+Pipeline, per file:
+
+1. Language: from the config's `languages` table, then the file name and
+   extension, then the shebang.
+2. Parse: a data format into its document; code into a tree-sitter tree.
+3. Fragments: the injection queries of that language find embedded code;
+   each fragment gets a language and a byte range in its host.
+4. Recurse: each fragment goes through steps 2-4 as a file of its own.
+5. Evaluate: the policies that apply to the language (section 8.4) run on
+   the file and on each fragment.
+6. Report: every result is resolved to `file:line:col` of the real file.
+
+Files are processed in parallel. Policies are compiled once into a regorus
+`Engine`; each evaluation clones it and sets its own `input` and `data`.
+
+Crates (zizmor's shape: few, small):
+
+| Crate | Holds |
+|---|---|
+| `crates/zoll` | the command: arguments, config discovery, output formats |
+| `crates/zoll_core` | the engine: walking, languages, parsing, fragments, locations, evaluation, lock |
+
+Repository data, read at build time:
+
+| Path | Holds |
+|---|---|
+| `queries/<language>/injections.scm` | where a language holds code of another (section 6) |
+
+A third crate appears only when something earns it (a SARIF model, test
+helpers), not ahead of time.
+
+## 6. Injections: the map of embedded code
+
+An injection is a tree-sitter query that says: in language X, at this node,
+sits code of language Y. Examples: the argument of `awk` in bash is awk; the
+value of `run:` in YAML is bash; a fenced block in Markdown is the language
+of its info string.
+
+- Source: editor query collections, not written by hand. nvim-treesitter
+  (Apache-2.0, ~300 files) and Helix (MPL-2.0, 232 files) are copied into
+  `queries/` by a sync script at a pinned commit. Each file keeps its license
+  header; nvim parts inside Helix files keep their attribution. Updating is
+  raising the commit and re-running the script; the diff is reviewed.
+- The sync script strips editor-only directives zoll does not evaluate
+  (e.g. Neovim's `#offset!`).
+- Semantics follow Helix's tree-house: captures `@injection.content`,
+  `@injection.language`, `@injection.filename`, `@injection.shebang`;
+  properties `injection.language`, `injection.combined`,
+  `injection.include-children`, `injection.include-unnamed-children`. An
+  unknown predicate fails the query load.
+- Coverage is never total: a string whose language no context reveals is
+  not a fragment. zoll writes only the gaps (e.g. SQL in Python strings) and
+  the tests.
+- The editor maps also mark comments and regexes; v1 keeps them. Whether to
+  limit which languages become fragments is decided on real files later.
+- User-defined injections in the config are not in v1.
+
+## 7. Languages and distribution
+
+- Grammars come from the Rust crate of tree-sitter-language-pack (305
+  grammars, permissive licenses only), compiled in, never downloaded.
+- `zoll-lint` (PyPI) carries the binary with the base set, about 25
+  languages:
+  - data and config: yaml, json, toml, xml, hcl, dockerfile;
+  - shell and the languages shell holds: bash, powershell, make, awk, jq;
+  - groovy (Jenkinsfile);
+  - web: javascript, typescript, tsx, html, css;
+  - general: python, go, rust, java, kotlin, c, cpp, c_sharp, php, ruby,
+    swift;
+  - other: sql, markdown.
+- `zoll-lint[full]` adds one package with every other grammar as shared
+  libraries installed under `<prefix>/share/zoll/grammars/`. The binary,
+  at `<prefix>/bin/zoll`, looks in `../share/zoll/grammars/` at start. If one
+  wheel exceeds PyPI's 100 MB file limit, `full` is split into a few packages
+  the extra pulls together, or a limit increase is requested.
+- A custom set is a build from git, `cargo install --git
+  https://github.com/Tensorcery/zoll zoll` with Cargo features
+  naming the languages. zoll is not published on crates.io: `queries/` sits
+  outside the crates, and a published crate carries only its own directory.
+- `zoll languages` lists what this installation can parse.
+
+## 8. The input model *(public API)*
+
+### 8.1 Data formats
+
+YAML, JSON and TOML: `input` is the parsed document, exactly as conftest
+gives it: no key added. A multi-document YAML file is evaluated one document
+at a time. `data.conftest.file` is set as conftest sets it (`{name, dir}`).
+
+Dockerfile, HCL and XML are parsed as code in v1 (8.2): conftest builds
+their documents with Go libraries in shapes of their own, and re-creating
+them is later work. A conftest policy for those formats does not run until
+then.
+
+### 8.2 Code
+
+`input` is the tree-sitter tree as nested JSON:
+
+- named nodes only (punctuation and anonymous nodes are left out);
+- each node: `type`, `start` and `end` (`{line, column}`, 1-based), `fields`
+  for children reached by a field name, `children` for the others;
+- `text` on leaf nodes only.
+
+```json
+{"type": "program", "start": {"line": 1, "column": 1}, "end": {"line": 1, "column": 22},
+ "children": [
+  {"type": "pipeline", "start": {...}, "end": {...}, "children": [
+    {"type": "command", "start": {...}, "end": {...},
+     "fields": {"name": {"type": "command_name", "text": "ls", "start": {...}, "end": {...}}}},
+    {"type": "command", "start": {...}, "end": {...},
+     "fields": {"name": {"type": "command_name", "text": "awk", "start": {...}, "end": {...}},
+                "argument": [{"type": "raw_string", "text": "'{print $1}'", "start": {...}, "end": {...}}]}}]}]}
+```
+
+Positions are inside the nodes here, unlike data formats: this format is
+zoll's own, so nothing breaks, and a policy can point at a node (8.5).
+
+Node names are the grammar's own; `zoll inspect` shows them.
+
+### 8.3 Fragments are files
+
+An embedded fragment is evaluated as a file of its own: its `input` is its
+own document or tree. A policy about bash runs on `.sh` files, on bash in a
+`run:`, and on bash in a Dockerfile `RUN` alike.
+
+`data.zoll.file` tells what is being evaluated:
+
+```json
+{
+  "path": ".github/workflows/ci.yml",
+  "language": "bash",
+  "host": {
+    "path": ".github/workflows/ci.yml",
+    "language": "yaml",
+    "at": ["jobs", "build", "steps", 0, "run"]
+  }
+}
+```
+
+A file has no `host`. A fragment's `host.at` is a path when the host is a
+data document and a node (as in 8.2) when the host is code; a fragment in a
+fragment names the fragment as its host. zoll's own facts live under
+`data.zoll`, never inside `input`.
+
+### 8.4 Which policies run where
+
+The Rego package says the language: policies in `package bash` run on bash
+only (files and fragments), `package yaml` on YAML only; the package name is
+the language-pack name of the language.
+
+A package that names no language is a library: it can be imported, it is
+never evaluated on its own. `package main` is an error unless the config
+binds it - zoll stops and says which language to name instead:
+
+```
+policy/workflows.rego: package main does not name a language;
+use the language it checks, e.g. `package yaml`
+```
+
+`[tool.zoll.packages]` binds a package to a language, so conftest policies
+(`main`, `kubernetes`, `docker`...) run with their files untouched:
+
+```toml
+[tool.zoll.packages]
+main = "yaml"
+kubernetes = "yaml"
+```
+
+Starting strict keeps the door open: allowing more later breaks no one,
+narrowing a permissive rule would.
+
+### 8.5 Results and where they point
+
+A `deny` or `warn` rule (conftest's rule-name patterns:
+`^(deny|violation)(_[a-zA-Z0-9]+)*$`, `^warn(_[a-zA-Z0-9]+)*$`) yields:
+
+- a string - the violation points at the start of the file or fragment;
+- `{"msg": ..., "at": [path]}` - a path in a data document, resolved to its
+  position;
+- `{"msg": ..., "at": node}` - a code node; its `start`/`end` are used.
+
+Positions in fragments are mapped back through every host to the real file.
+Other keys in the object are kept as metadata, as conftest does. conftest's
+`_loc` is honoured when present.
+
+### 8.6 Rule ids
+
+A rule's id is the package and the rule-name suffix: `deny_curl_pipe` in
+`package bash` is `bash.curl_pipe`; a bare `deny` in `bash` is `bash`. Ids
+are what suppression, the reports and SARIF's `ruleId` use.
+
+## 9. Configuration
+
+Found as ruff finds its own: `zoll.toml`, `.zoll.toml`, or `[tool.zoll]` in
+`pyproject.toml`, searched from the working directory up. `--config` names
+one.
+
+```toml
+[tool.zoll]
+include = ["**/*"]
+exclude = ["vendor/**"]            # .gitignore is always honoured
+
+policies = [
+  "policy/",                                                            # a directory
+  "git+https://github.com/Tensorcery/zoll-policies//embedded-code@v1.0.0",
+  "git+ssh://git@github.com/my-org/policies//k8s@3f2a9c1",              # a commit
+]
+data = ["policy/data/"]           # JSON/YAML under data.*, as conftest --data
+
+fail-on = "deny"                  # or "warn": warnings fail too
+
+[tool.zoll.packages]              # a package that is not a language name (8.4)
+main = "yaml"
+
+[tool.zoll.languages]             # a file whose name does not tell its language
+"Jenkinsfile" = "groovy"
+
+[tool.zoll.per-file-ignores]
+"scripts/legacy/**" = ["bash.curl_pipe"]
+```
+
+An inline suppression: a comment `zoll: ignore[bash.curl_pipe]` on the line
+the violation points at, in whatever comment syntax that file's language
+has.
+
+## 10. Policies from git and `zoll.lock`
+
+- A source is `git+<url>//<directory>@<tag-or-commit>`.
+- Fetched with the system `git`, so every credential the user has for git
+  works (SSH agent, credential helpers, `gh auth`). Shallow, the one commit,
+  into `~/.cache/zoll/policies/<hash>`; a cached commit needs no network.
+- `zoll.lock` records, per source, the commit its ref resolved to. Runs use
+  the locked commit, never the ref's current target.
+- `zoll lock` writes the lock for sources missing from it;
+  `zoll lock --upgrade` moves every ref to its current commit.
+- `zoll check --locked` fails (exit 2) when the lock and the config disagree.
+
+## 11. Command line
+
+```
+zoll --version | -V
+zoll --help | -h            each command has its own --help
+  --config PATH             this config instead of the search
+  --color auto|always|never
+
+zoll check [PATHS...]       default: the current directory
+  --format text|json|github|sarif
+  --fail-on deny|warn
+  --locked
+
+zoll inspect FILE           input and data.zoll of the file and of each fragment
+zoll lock [--upgrade]
+zoll languages
+```
+
+Exit codes: `0` no violation, `1` violations, `2` zoll itself failed
+(config, network, a policy that does not load).
+
+Later: `zoll test` for policy tests (`*_test.rego`), user injections in the
+config.
+
+## 12. Output
+
+- `text`: `path:line:col rule-id: message`, with the source line.
+- `json`: one object per violation - rule id, severity (deny/warn), message,
+  path, start, end, and the fragment chain it was found through.
+- `github`: workflow commands, so violations annotate the PR diff.
+- `sarif`: SARIF 2.1.0 for GitHub code scanning; minimal structs, only the
+  fields zoll emits.
+
+## 13. Risks
+
+- regorus is pre-1.0 with frequent breaking minor releases: the exact
+  version is pinned, and CI runs a corpus of real conftest policies through
+  OPA and zoll and compares.
+- regorus lacks some builtins (`rego.metadata.*`, `jwt.*`, some
+  `net.cidr_*`, `rego.parse_module`, `strings.render_template`) and rejects
+  `not x = v`; a conftest policy using them does not load. Regal, run on
+  policies, does not know regorus' gaps; a capabilities file for Regal that
+  removes them is published with zoll.
+- Editor injection queries are written for highlighting; they mark more
+  than zoll needs, and their predicates must be supported or stripped.
+- MPL-2.0 query files stay files of their own under that license.
+- The `full` grammar package may exceed PyPI's size limit (section 7).
+
+## 14. Calls made after the design review
+
+A reviewer read this document as the builder would. These answers were not
+discussed with the owner; they are the author's calls, open to correction.
+
+- **Fragment text is the decoded value**, the text the target language's
+  interpreter receives: a YAML scalar's value (escapes resolved, block
+  indentation removed), a shell string without its quotes, a Dockerfile
+  `RUN` with its line continuations joined, the joined ranges of an
+  `injection.combined`. Positions map back through a segmented map (each
+  decoded run → its range in the host), not one offset.
+- **Query sources**: Helix first, since its semantics are the ones zoll
+  implements; nvim-treesitter only for a language Helix lacks. One source per
+  language, never merged. zoll implements the predicates the kept files use -
+  at least `#eq?`, `#match?`, `#any-of?`, `#not-*` forms, nvim's
+  `#lua-match?` translated to a regex where it can be, and Markdown's
+  info-string language. An injection that needs a predicate zoll cannot
+  evaluate is dropped by the sync script and listed in its output.
+- **A fragment whose language is not installed** is reported as a notice
+  (`zoll.unchecked`, printed, never a failure), so a user knows that code was
+  not checked.
+- **Parse failures.** tree-sitter always yields a tree: ERROR nodes stay in
+  it, typed `ERROR`, and policies see them. A data format that does not
+  parse (Helm templates, `${{ }}` that breaks YAML) is a violation with the
+  reserved id `zoll.parse`, severity warn; `per-file-ignores` silences it for
+  templated paths.
+- **Rego v1 by default** (conftest's and regorus' default); `rego-version =
+  "v0"` in the config switches the whole run, since regorus sets it per
+  engine.
+- **conftest `exception` rules** are honoured as conftest honours them.
+- **A source missing from `zoll.lock`**: `zoll check` resolves it and writes
+  the lock, as `uv run` does, so the change shows in `git diff`; with
+  `--locked` it fails instead.
+- **Inline suppression in a fragment** is written in the real file, on the
+  line the violation is reported at, in that file's comment syntax; the same
+  line only. A host with no comments (JSON) has `per-file-ignores` only.
+- **Columns are 1-based Unicode code points** (as ruff counts them). SARIF
+  says so with `columnKind: "unicodeCodePoints"`.
+- **`zoll-lint[full]` comes after v1.** Loading a grammar from a shared
+  library needs `unsafe`; the workspace lint becomes `deny`, and the one
+  loading module allows it with a comment. v1 ships the base set only.
+
+## 15. Decided after the review, with the owner
+
+1. `package main` is an error; `[tool.zoll.packages]` binds a package to a
+   language; any other package is a library (8.4).
+2. v1 gives conftest's documents for YAML, JSON and TOML; Dockerfile, HCL
+   and XML are code until their conftest shapes are built (8.1).
+3. Cross-file rules (conftest `--combine`, all files as one `input`) are not
+   in v1. They come later as a mode switched on explicitly, a new input shape
+   beside the per-file one, so adding them breaks no policy.
+
+## 16. Left to the builder
+
+- The JSON encoding details not fixed above (key order, how a field with
+  several children is a list vs one child an object, escaping).
+- How the YAML path-to-position map is built (tree-sitter-yaml beside the
+  serde document, as zizmor's `yamlpath`, or otherwise).
+- The cache layout and lock file format beyond the fields named.
+- Thread pool and walking crates (`ignore`, `rayon` are the obvious ones).
+- How `zoll languages` and the grammar directory are laid out internally.
