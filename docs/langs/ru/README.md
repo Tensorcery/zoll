@@ -13,8 +13,8 @@ awk в строке shell, скрипт в YAML `run:`, строка `RUN` в Do
 
 > **Статус: проектирование.** Движок ещё не написан; ниже — согласованный
 > интерфейс ([docs/design.md](../../design.md)). Пока он прогоняет
-> политики Rego по YAML, JSON и TOML, как conftest; код и встроенный в
-> файлы код — следующие шаги.
+> политики Rego по YAML, JSON и TOML, как conftest, и по дереву tree-sitter
+> для кода; встроенный в файлы код — следующий шаг.
 
 ## Как это работает
 
@@ -46,7 +46,8 @@ deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
 	walk(input, [_, node])
 	node.type == "pipeline"
 	some cmd in node.children
-	cmd.fields.name.text == "curl"
+	cmd.type == "command"
+	cmd.fields.name.children[0].text == "curl"
 }
 ```
 
@@ -84,7 +85,7 @@ data = ["policy/data/"]
 
 ```bash
 uv tool install zoll-lint          # около 25 популярных языков
-uv tool install 'zoll-lint[full]'  # все грамматики tree-sitter-language-pack
+uv tool install 'zoll-lint[full]'  # все остальные грамматики zoll
 ```
 
 Команда — `zoll`; имя `zoll` на PyPI занято похожим проектом.

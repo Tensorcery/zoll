@@ -13,8 +13,8 @@ runs your Rego policies over all of it.
 
 > **Status: design.** The engine is not written yet; what follows is the
 > agreed interface ([docs/design.md](docs/design.md)). Today it runs
-> Rego policies over YAML, JSON and TOML, as conftest does; code and the
-> code embedded in files come next.
+> Rego policies over YAML, JSON and TOML, as conftest does, and over the
+> tree-sitter tree of code; the code embedded in files comes next.
 
 ## How it works
 
@@ -45,7 +45,8 @@ deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
 	walk(input, [_, node])
 	node.type == "pipeline"
 	some cmd in node.children
-	cmd.fields.name.text == "curl"
+	cmd.type == "command"
+	cmd.fields.name.children[0].text == "curl"
 }
 ```
 
@@ -83,7 +84,7 @@ Policies from git are pinned to their commit in `zoll.lock`; `zoll lock
 
 ```bash
 uv tool install zoll-lint          # about 25 common languages
-uv tool install 'zoll-lint[full]'  # every grammar tree-sitter-language-pack has
+uv tool install 'zoll-lint[full]'  # every other grammar zoll has
 ```
 
 The command is `zoll`; the PyPI name `zoll` is taken by a look-alike.

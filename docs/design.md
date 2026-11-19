@@ -141,8 +141,19 @@ of its info string.
 
 ## 7. Languages and distribution
 
-- Grammars come from the Rust crate of tree-sitter-language-pack (305
-  grammars, permissive licenses only), compiled in, never downloaded.
+- Grammars are compiled in, never downloaded. Each comes from its own crate
+  on crates.io (`tree-sitter-bash`, `tree-sitter-python`, ...), pinned in
+  `Cargo.lock` and checked by `cargo deny`; a grammar with no crate under a
+  permissive license is vendored in `crates/zoll_grammars/` with its source
+  and revision (awk, jq). dockerfile is `tree-sitter-containerfile`, sql is
+  `tree-sitter-sequel`, markdown is the block grammar of `tree-sitter-md`.
+  tree-sitter-language-pack was the first idea and was dropped: its build
+  downloads the grammar sources from a release and checks them against a hash
+  from the same server.
+- YAML, JSON and TOML are read as data (8.1) and are always there; they need
+  no grammar.
+- Each language is a Cargo feature of its name; `base` is the set below and
+  is the default.
 - `zoll-lint` (PyPI) carries the binary with the base set, about 25
   languages:
   - data and config: yaml, json, toml, xml, hcl, dockerfile;
@@ -162,6 +173,10 @@ of its info string.
   naming the languages. zoll is not published on crates.io: `queries/` sits
   outside the crates, and a published crate carries only its own directory.
 - `zoll languages` lists what this installation can parse.
+- The release binary with the base set is 54 MiB (56,815,696 bytes; 6.5 MiB
+  gzipped), 7.6 MiB without any grammar (x86_64 Linux, rustc 1.100, thin LTO,
+  stripped; measured at stage 4). The grammars are most of it: sql 12.7 MiB,
+  c_sharp 6.9, swift 3.9, kotlin 3.3, cpp 3.2, typescript and tsx 2.7.
 
 ## 8. The input model *(public API)*
 
@@ -201,16 +216,27 @@ then.
 - named nodes only (punctuation and anonymous nodes are left out);
 - each node: `type`, `start` and `end` (`{line, column}`, 1-based), `fields`
   for children reached by a field name, `children` for the others;
-- `text` on leaf nodes only.
+- `text` on leaf nodes only;
+- a field that may hold several nodes (`multiple` in the grammar's
+  `node-types.json`) is always a list, even with one node, so a policy reads
+  it the same way in every file; any other field is an object;
+- a part that does not parse is a node of type `ERROR` and stays in the
+  tree; a node the parser inserted for what the text lacks (`MISSING`) is
+  left out, as nothing in the file is there to point at;
+- columns count Unicode code points, as everywhere in zoll;
+- a tree nested deeper than 512 is refused: the file gets a `zoll.parse`
+  warning.
 
 ```json
 {"type": "program", "start": {"line": 1, "column": 1}, "end": {"line": 1, "column": 22},
  "children": [
   {"type": "pipeline", "start": {...}, "end": {...}, "children": [
     {"type": "command", "start": {...}, "end": {...},
-     "fields": {"name": {"type": "command_name", "text": "ls", "start": {...}, "end": {...}}}},
+     "fields": {"name": {"type": "command_name", "start": {...}, "end": {...},
+                         "children": [{"type": "word", "text": "ls", "start": {...}, "end": {...}}]}}},
     {"type": "command", "start": {...}, "end": {...},
-     "fields": {"name": {"type": "command_name", "text": "awk", "start": {...}, "end": {...}},
+     "fields": {"name": {"type": "command_name", "start": {...}, "end": {...},
+                         "children": [{"type": "word", "text": "awk", "start": {...}, "end": {...}}]},
                 "argument": [{"type": "raw_string", "text": "'{print $1}'", "start": {...}, "end": {...}}]}}]}]}
 ```
 
@@ -248,7 +274,7 @@ fragment names the fragment as its host. zoll's own facts live under
 
 The Rego package says the language: policies in `package bash` run on bash
 only (files and fragments), `package yaml` on YAML only; the package name is
-the language-pack name of the language.
+zoll's name of the language, as `zoll languages` lists it.
 
 A package that names no language is a library: it can be imported, it is
 never evaluated on its own. `package main` is an error unless the config
@@ -479,11 +505,13 @@ discussed with the owner; they are the author's calls, open to correction.
    go-yaml v3.
 5. A root array is evaluated item by item, as conftest does, in YAML and
    JSON alike (8.1).
+6. Grammars come from their own crates on crates.io, and awk and jq are
+   vendored, instead of tree-sitter-language-pack (7). Found while building
+   stage 4.
 
 ## 16. Left to the builder
 
-- The JSON encoding details not fixed above (key order, how a field with
-  several children is a list vs one child an object, escaping).
+- The JSON encoding details not fixed above (key order, escaping).
 - How the YAML path-to-position map is built (tree-sitter-yaml beside the
   serde document, as zizmor's `yamlpath`, or otherwise).
 - The cache layout and lock file format beyond the fields named.

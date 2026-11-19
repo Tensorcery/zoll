@@ -79,15 +79,17 @@ puts it at its line, and conftest still takes that policy.
 
 ## 4. Code
 
-- [ ] tree-sitter-language-pack compiled in, the base set of section 7
-      behind Cargo features, the default feature set = the base set
-- [ ] a code file becomes the tree of section 8.2: named nodes, `fields` and
+- [x] grammars compiled in, the base set of section 7 behind Cargo
+      features, the default feature set = the base set (their own crates,
+      awk and jq vendored: section 15, item 6)
+- [x] a code file becomes the tree of section 8.2: named nodes, `fields` and
       `children`, `text` on leaves, `start`/`end` in every node
-- [ ] columns are 1-based Unicode code points
-- [ ] `at` as a node resolves to its position
-- [ ] ERROR nodes stay in the tree, typed `ERROR`
-- [ ] `zoll languages` lists the compiled-in languages
-- [ ] a release build's binary size is measured and written down
+- [x] columns are 1-based Unicode code points
+- [x] `at` as a node resolves to its position
+- [x] ERROR nodes stay in the tree, typed `ERROR`
+- [x] `zoll languages` lists the compiled-in languages
+- [x] a release build's binary size is measured and written down: 54 MiB
+      with the base set (section 7)
 
 **Checkpoint:** a `package bash` policy reports `curl | sh` in a `.sh`
 file at its line; `zoll inspect script.sh` shows the tree.
