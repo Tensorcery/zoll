@@ -12,9 +12,9 @@ awk в строке shell, скрипт в YAML `run:`, строка `RUN` в Do
 прогоняет по всему этому твои политики на Rego.
 
 > **Статус: проектирование.** Движок ещё не написан; ниже — согласованный
-> интерфейс ([docs/design.md](../../design.md)). Пока бинарник находит файлы и их
-> языки и даёт YAML, JSON и TOML их документы (`zoll inspect`); политики
-> ещё не запускает.
+> интерфейс ([docs/design.md](../../design.md)). Пока он прогоняет
+> политики Rego по YAML, JSON и TOML, как conftest; код и встроенный в
+> файлы код — следующие шаги.
 
 ## Как это работает
 
@@ -52,7 +52,13 @@ deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
 
 ```
 $ zoll check
-.github/workflows/ci.yml:14:11 bash.curl_pipe: curl piped into a shell
+error[bash.curl_pipe]: curl piped into a shell
+  --> .github/workflows/ci.yml:14:11
+   |
+14 |           curl -fsSL https://example.com/install.sh | sh
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1 violation
 ```
 
 `zoll inspect ФАЙЛ` печатает JSON, который увидит политика для этого файла и

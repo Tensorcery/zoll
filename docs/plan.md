@@ -20,8 +20,8 @@ YAML policies.
       `[tool.zoll]` in `pyproject.toml`, from the working directory up
 - [x] every field of section 9 is parsed; an unknown field or a wrong type
       is an error naming the file, the field and what was expected
-- [x] exit codes 0 / 1 / 2 as section 11 says (1 waits for violations,
-      stage 3)
+- [x] exit codes 0 / 1 / 2 as section 11 says (1 from stage 3 on, when
+      policies run)
 - [x] snapshot tests for each command's output and for each config error
 
 **Checkpoint:** `zoll check` in a repository with a broken `zoll.toml`
@@ -47,24 +47,35 @@ document a conftest policy would see.
 
 ## 3. Policies and the report
 
-- [ ] regorus at a pinned exact version; policies loaded from directories,
+- [x] regorus at a pinned exact version; policies loaded from directories,
       Rego v1 by default, `rego-version = "v0"` switches the run
-- [ ] `data` directories loaded under `data.*`
-- [ ] `package <language>` runs on that language; `package main` is an error
+- [x] `data` directories loaded under `data.*`
+- [x] `package <language>` runs on that language; `package main` is an error
       naming the language to use; `[tool.zoll.packages]` binds a package to
       a language; any other package is a library (section 8.4)
-- [ ] `deny`, `violation`, `warn` with conftest's name patterns; a string or
+- [x] `deny`, `violation`, `warn` with conftest's name patterns; a string or
       an object with `msg`; conftest `exception` rules (section 8.5)
-- [ ] rule ids `package.suffix` (section 8.6)
-- [ ] `at` as a path resolved to `line:col` in the YAML/JSON/TOML file;
+- [x] rule ids `package.suffix` (section 8.6)
+- [x] `at` as a path resolved to `line:col` in the YAML/JSON/TOML file;
       no `at` points at the start of the file; `_loc` honoured
-- [ ] the `text` report: `path:line:col rule-id: message` with the source
-      line; `--fail-on` and `fail-on`
-- [ ] the policy engine is compiled once and cloned per file
+- [x] the `text` report: each violation as rustc draws one (`error[rule-id]:
+      message`, `--> path:line:col`, the line marked), then a count;
+      `--fail-on` and `fail-on`
+- [x] the policy engine is compiled once and cloned per file; files run in
+      parallel
+- [x] `zoll check -` reads the standard input as YAML, as conftest does, for
+      `helm template | zoll check -`
+- [x] a data file that does not parse: warn `zoll.parse` (planned for stage
+      5; a Helm chart's templates need it here)
 
 **Checkpoint:** the owner's conftest policies for workflows and the Helm
 chart run through `zoll check` with only `[tool.zoll.packages] main =
 "yaml"` added, and report the same violations as conftest, at their lines.
+
+Done on a copy of betting's workflows and a rendered chart, violations put
+in: the same 16 and 2 as conftest, with the same messages. A string result
+points at the start of its document; returning `{"msg": ..., "at": [...]}`
+puts it at its line, and conftest still takes that policy.
 
 ## 4. Code
 
@@ -94,7 +105,7 @@ file at its line; `zoll inspect script.sh` shows the tree.
 - [ ] a fragment is evaluated as a file of its own, with `data.zoll.file.host`
       (section 8.3)
 - [ ] a fragment whose language is not compiled in: notice `zoll.unchecked`
-- [ ] a data file that does not parse: warn `zoll.parse`
+- [x] a data file that does not parse: warn `zoll.parse` (done in stage 3)
 - [ ] the license of the wheel and the crates becomes `MIT AND MPL-2.0 AND
       Apache-2.0`, with the license texts shipped
 

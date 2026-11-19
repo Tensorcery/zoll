@@ -12,9 +12,9 @@ document, code into its syntax tree - finds the code embedded in it, and
 runs your Rego policies over all of it.
 
 > **Status: design.** The engine is not written yet; what follows is the
-> agreed interface ([docs/design.md](docs/design.md)). Today the binary
-> finds the files and their languages and gives YAML, JSON and TOML their
-> documents (`zoll inspect`); it runs no policy yet.
+> agreed interface ([docs/design.md](docs/design.md)). Today it runs
+> Rego policies over YAML, JSON and TOML, as conftest does; code and the
+> code embedded in files come next.
 
 ## How it works
 
@@ -51,7 +51,13 @@ deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
 
 ```
 $ zoll check
-.github/workflows/ci.yml:14:11 bash.curl_pipe: curl piped into a shell
+error[bash.curl_pipe]: curl piped into a shell
+  --> .github/workflows/ci.yml:14:11
+   |
+14 |           curl -fsSL https://example.com/install.sh | sh
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1 violation
 ```
 
 `zoll inspect FILE` prints the JSON a policy sees for that file and every

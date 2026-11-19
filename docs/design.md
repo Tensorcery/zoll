@@ -324,6 +324,11 @@ main = "yaml"
 "scripts/legacy/**" = ["bash.curl_pipe"]
 ```
 
+`policies` is `["policy/"]` when the config names none, as conftest's
+`--policy` default. A data file's document goes at the path of its
+directory under the data directory, its file name left out, as conftest's
+`--data` puts it: `policy/data/teams/owners.yaml` holds `data.teams.*`.
+
 An inline suppression: a comment `zoll: ignore[bash.curl_pipe]` on the line
 the violation points at, in whatever comment syntax that file's language
 has.
@@ -354,6 +359,8 @@ zoll check [PATHS...]       default: the current directory
   --locked
   --show-files              list each file to check and its language, check none
 
+zoll check -                the standard input, read as YAML, as conftest reads
+                            it: `helm template . | zoll check -`
 zoll inspect FILE           input and data of the file and of each fragment
 zoll lock [--upgrade]
 zoll languages
@@ -376,7 +383,22 @@ config.
 
 ## 12. Output
 
-- `text`: `path:line:col rule-id: message`, with the source line.
+- `text`: each violation as rustc draws a diagnostic, then a count:
+
+  ```
+  error[yaml.curl_pipe]: curl piped into a shell
+   --> .github/workflows/ci.yml:14:9
+     |
+  14 |         run: |
+     |         ^^^
+  ```
+
+  `error` for `deny` and `violation`, `warning` for `warn`. A result with
+  `at` points at that path's key (a list item: the item), or at the nearest
+  of its parents that is in the file; without `at`, at the start of its
+  document - a string result cannot say more, so a policy returns `at` to be
+  shown at its line. conftest takes the same object and keeps `at` as
+  metadata, so one policy serves both.
 - `json`: one object per violation - rule id, severity (deny/warn), message,
   path, start, end, and the fragment chain it was found through.
 - `github`: workflow commands, so violations annotate the PR diff.
@@ -424,6 +446,9 @@ discussed with the owner; they are the author's calls, open to correction.
   parse (Helm templates, `${{ }}` that breaks YAML) is a violation with the
   reserved id `zoll.parse`, severity warn; `per-file-ignores` silences it for
   templated paths.
+- **OPA's builtins, less two.** regorus is built without `json.match_schema`
+  (its JSON Schema stack is licensed MIT-0) and without `http.send`: a
+  policy reads the files it is given, not the network.
 - **Rego v1 by default** (conftest's and regorus' default); `rego-version =
   "v0"` in the config switches the whole run, since regorus sets it per
   engine.
