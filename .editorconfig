@@ -1,0 +1,49 @@
+# Editors write what the linters and the hooks would otherwise rewrite: LF
+# endings, one final newline, no trailing spaces, and the indent each format
+# is read with. The rules themselves live in rustfmt, Regal and pre-commit;
+# this file only keeps an editor from producing a diff they then undo.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# rustfmt's max_width, so an editor's ruler sits where the format check does.
+[*.rs]
+max_line_length = 100
+
+[*.{yml,yaml,json,toml}]
+indent_size = 2
+
+# opa fmt and Regal indent Rego with tabs.
+[*.rego]
+indent_style = tab
+
+# make refuses a recipe indented with spaces.
+[{Makefile,*.mk}]
+indent_style = tab
+
+# insta's snapshots are compared byte for byte: an editor that trims a
+# trailing space or adds a newline turns a passing snapshot into a failing one.
+[*.snap]
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+# cargo and uv write the locks; nothing edits them by hand.
+[{Cargo.lock,uv.lock}]
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_size = unset
+
+# The corpus stays as the real files were written: see .gitattributes.
+[crates/*/tests/corpus/**]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset

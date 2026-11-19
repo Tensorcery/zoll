@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+# Written by cargo and uv; nothing reads them in a diff.
+Cargo.lock  -diff  linguist-generated=true
+uv.lock     -diff  linguist-generated=true
+
+# The corpus is real files compared with what conftest made of them, byte for
+# byte: a byte order mark or a line ending git rewrote would test something
+# else.
+crates/*/tests/corpus/**  -text
