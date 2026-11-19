@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use std::io;
+use std::ops::Range;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
@@ -93,16 +94,23 @@ pub enum Error {
     /// The file is missing or unreadable.
     Read(PathBuf, io::Error),
     /// The file is not TOML, or holds a field or a value zoll does not take.
-    Parse(PathBuf, Box<toml::de::Error>),
+    Parse {
+        /// The file.
+        path: PathBuf,
+        /// Its text, for the command to show the line.
+        text: String,
+        /// What is wrong, and what was expected.
+        message: String,
+        /// Where in `text`, in bytes, when the parser knows.
+        span: Option<Range<usize>>,
+    },
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Read(path, error) => write!(f, "{}: {error}", path.display()),
-            // toml's message holds the line and column, the source line, and
-            // what was expected there.
-            Self::Parse(path, error) => write!(f, "{}: {error}", path.display()),
+            Self::Parse { path, message, .. } => write!(f, "{}: {message}", path.display()),
         }
     }
 }
@@ -144,7 +152,16 @@ pub fn load(path: &Path) -> Result<Config, Error> {
 /// `[tool.zoll]`.
 fn parse(path: &Path) -> Result<Option<Config>, Error> {
     let text = std::fs::read_to_string(path).map_err(|e| Error::Read(path.to_owned(), e))?;
-    let parse_error = |e| Error::Parse(path.to_owned(), Box::new(e));
+    let parse_error = |e: toml::de::Error| Error::Parse {
+        path: path.to_owned(),
+        text: text.clone(),
+        // serde's words for the TOML ones.
+        message: e
+            .message()
+            .replace("a sequence", "an array")
+            .replace("a map", "a table"),
+        span: e.span(),
+    };
     if path
         .file_name()
         .is_some_and(|name| name == "pyproject.toml")

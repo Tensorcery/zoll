@@ -12,6 +12,9 @@ authors = ["Tensorcery"]
 
 # Versions live here once; a crate names a dependency with `workspace = true`.
 [workspace.dependencies]
+annotate-snippets = "0.12.18"
+anstream = "1.0.0"
+anstyle = "1.0.14"
 clap = { version = "4.6.8", features = ["derive"] }
 insta = { version = "1.49.0", features = ["filters"] }
 insta-cmd = "0.7.0"

@@ -12,6 +12,9 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
+annotate-snippets.workspace = true
+anstream.workspace = true
+anstyle.workspace = true
 clap.workspace = true
 zoll_core = { path = "../zoll_core" }
 
