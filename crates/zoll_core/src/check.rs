@@ -1,11 +1,13 @@
 //! A run: every file through its documents and its language's policies, in
 //! parallel, each violation placed in its file.
 
+use std::ops::Range;
+
 use rayon::prelude::*;
 
 use crate::document::{self, Place};
 use crate::error::{Error, line_column_span};
-use crate::input;
+use crate::input::{self, Evaluation};
 use crate::language;
 use crate::policy::{At, Policies, Severity, Violation};
 use crate::walk::File;
@@ -30,9 +32,7 @@ pub struct Found {
     pub place: Place,
 }
 
-/// The rule id of a data file that does not parse (docs/design.md,
-/// section 14).
-pub const PARSE: &str = "zoll.parse";
+pub use crate::input::{PARSE, UNCHECKED};
 
 /// Every file checked; those with nothing found are left out.
 ///
@@ -57,24 +57,27 @@ fn check_file(file: File, policies: &Policies) -> Result<Option<Checked>, Error>
     let text = input::read(&file)?;
     let mut found = Vec::new();
     match input::evaluations(&file, &text) {
-        Ok(evaluations) => {
+        Ok((evaluations, notes)) => {
             for evaluation in &evaluations {
-                for violation in policies.check(file.language, evaluation)? {
-                    let place = match (&violation.at, violation.line) {
-                        (Some(At::Path(path)), _) => {
-                            document::locate(file.language, &text, evaluation.origin, path)
-                        }
-                        (Some(At::Node { start, end }), _) => {
-                            let byte = |(line, column)| line_column_span(&text, line, column).start;
-                            Place::of(&text, byte(*start)..byte(*end))
-                        }
-                        (None, Some(line)) => line_start(&text, line),
-                        (None, None) => {
-                            document::locate(file.language, &text, evaluation.origin, &[])
-                        }
-                    };
+                let source = &evaluation.source;
+                for violation in policies.check(source.language, evaluation)? {
+                    let span = local_span(&violation, evaluation);
+                    let place = Place::of(&text, source.map.span(span));
                     found.push(Found { violation, place });
                 }
+            }
+            for note in notes {
+                found.push(Found {
+                    place: Place::of(&text, note.span),
+                    violation: Violation {
+                        rule: UNCHECKED.to_owned(),
+                        severity: Severity::Notice,
+                        message: note.message,
+                        at: None,
+                        line: None,
+                        metadata: serde_json::Map::new(),
+                    },
+                });
             }
         }
         // A data file that does not parse - a Helm template, `${{ }}` that
@@ -105,12 +108,30 @@ fn check_file(file: File, policies: &Policies) -> Result<Option<Checked>, Error>
     Ok(Some(Checked { file, text, found }))
 }
 
+/// The bytes a violation points at, in the text of its evaluation: its
+/// path, its node, its line, or the start of the document.
+fn local_span(violation: &Violation, evaluation: &Evaluation) -> Range<usize> {
+    let source = &evaluation.source;
+    let text = source.text.as_str();
+    match (&violation.at, violation.line) {
+        (Some(At::Path(path)), _) => {
+            document::locate(source.language, text, evaluation.origin, path).span
+        }
+        (Some(At::Node { start, end }), _) => {
+            let byte = |(line, column)| line_column_span(text, line, column).start;
+            byte(*start)..byte(*end)
+        }
+        (None, Some(line)) => line_start(text, line),
+        (None, None) => document::locate(source.language, text, evaluation.origin, &[]).span,
+    }
+}
+
 /// The start of a line, from 1; the end of the text past its last line.
-fn line_start(text: &str, line: usize) -> Place {
+fn line_start(text: &str, line: usize) -> Range<usize> {
     let start: usize = text
         .split_inclusive('\n')
         .take(line.saturating_sub(1))
         .map(str::len)
         .sum();
-    Place::of(text, start..start)
+    start..start
 }

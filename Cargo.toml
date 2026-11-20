@@ -6,7 +6,9 @@ resolver = "3"
 version = "0.0.0"
 edition = "2024"
 rust-version = "1.100"
-license = "MIT"
+# zoll is MIT; the injection queries it embeds are Helix's (MPL-2.0), parts
+# of them nvim-treesitter's (Apache-2.0): queries/README.md.
+license = "MIT AND MPL-2.0 AND Apache-2.0"
 repository = "https://github.com/Tensorcery/zoll"
 authors = ["Tensorcery"]
 
@@ -25,6 +27,7 @@ ignore = "0.4.34"
 # json.match_schema (its JSON Schema stack is MIT-0) and without http.send: a
 # policy reads the files, not the network.
 rayon = "1.12.0"
+regex = "1.13.2"
 regorus = { version = "=0.15.0", default-features = false, features = [
   "arc",
   "base64",
@@ -90,6 +93,9 @@ tree-sitter-svelte-ng = "1.0.2"
 tree-sitter-swift = "0.7.4"
 tree-sitter-typescript = "0.23.2"
 tree-sitter-xml = "0.7.0"
+# Always there: YAML is read as data, and its tree is where the injection
+# queries find the code in it.
+tree-sitter-yaml = "0.7.2"
 tree-sitter-zig = "1.1.2"
 zoll_grammars = { path = "crates/zoll_grammars", default-features = false }
 

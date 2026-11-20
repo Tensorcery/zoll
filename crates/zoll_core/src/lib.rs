@@ -7,6 +7,7 @@ pub mod code;
 pub mod config;
 pub mod document;
 pub mod error;
+pub mod injection;
 pub mod input;
 pub mod language;
 pub mod policy;

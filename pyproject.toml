@@ -10,8 +10,15 @@ build-backend = "maturin"
 name = "zoll-lint"
 description = "A policy engine for files of any language: Rego over data, code, and the code embedded in either"
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+# zoll is MIT; the binary carries Helix's injection queries (MPL-2.0, parts
+# nvim-treesitter's, Apache-2.0) and the vendored grammars (MIT,
+# BSD-3-Clause, Apache-2.0).
+license = "MIT AND MPL-2.0 AND Apache-2.0 AND BSD-3-Clause"
+license-files = [
+    "LICENSE",
+    "queries/LICENSE-*",
+    "crates/zoll_grammars/vendor/*/LICENSE",
+]
 authors = [{ name = "Tensorcery" }]
 # No Python runs inside: any interpreter that installs a wheel will do.
 requires-python = ">=3.10"

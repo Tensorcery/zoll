@@ -269,7 +269,7 @@ pub(crate) fn glob_of(glob: &str) -> Result<Glob, Error> {
         .map_err(|e| Error::Other(format!("`{glob}`: {e}")))
 }
 
-fn from_name(path: &Path) -> Option<&'static str> {
+pub(crate) fn from_name(path: &Path) -> Option<&'static str> {
     let name = path.file_name()?.to_str()?;
     if let Some((_, language)) = NAMES.iter().find(|(known, _)| *known == name) {
         return Some(language);
@@ -292,7 +292,11 @@ fn from_name(path: &Path) -> Option<&'static str> {
 fn from_shebang(path: &Path) -> Option<&'static str> {
     let mut head = [0; 128];
     let read = File::open(path).ok()?.read(&mut head).ok()?;
-    let line = std::str::from_utf8(&head[..read]).ok()?.lines().next()?;
+    of_shebang(std::str::from_utf8(&head[..read]).ok()?.lines().next()?)
+}
+
+/// The language of a `#!` line.
+pub(crate) fn of_shebang(line: &str) -> Option<&'static str> {
     let mut words = line.strip_prefix("#!")?.split_whitespace();
     let mut program = words.next()?.rsplit('/').next()?;
     if program == "env" {

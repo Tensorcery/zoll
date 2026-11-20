@@ -6,7 +6,7 @@ use std::sync::{LazyLock, OnceLock};
 
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
-use tree_sitter::{Language, Node, Parser, Point};
+use tree_sitter::{Language, Node, Parser, Point, Tree};
 
 use crate::language::LANGUAGES;
 
@@ -23,11 +23,17 @@ const MAX_TEXT_RATIO: usize = 64;
 const MIN_TEXT: usize = 1 << 20;
 
 /// The grammar of a language and its `node-types.json`, when zoll was built
-/// with it.
+/// with it. YAML's is always there: its documents are read as data, its tree
+/// is where the injection queries look.
 // A table: one arm per language, as long as the build has languages.
 #[allow(clippy::too_many_lines)]
-fn grammar(language: &str) -> Option<(Language, &'static str)> {
+#[must_use]
+pub fn grammar(language: &str) -> Option<(Language, &'static str)> {
     match language {
+        "yaml" => Some((
+            tree_sitter_yaml::LANGUAGE.into(),
+            tree_sitter_yaml::NODE_TYPES,
+        )),
         #[cfg(feature = "awk")]
         "awk" => Some((zoll_grammars::AWK.into(), zoll_grammars::AWK_NODE_TYPES)),
         #[cfg(feature = "bash")]
@@ -252,29 +258,41 @@ pub fn compiled(language: &str) -> bool {
     grammar(language).is_some()
 }
 
-/// The tree of `text`, a file of `language`; `None` when zoll was built
-/// without its grammar.
+/// The tree-sitter tree of `text`, a file of `language`; `None` when zoll
+/// was built without its grammar.
 ///
 /// # Errors
 ///
-/// The grammar does not load, or the tree is deeper than zoll walks.
+/// The grammar does not load.
 #[must_use]
-pub fn tree(language: &str, text: &str) -> Option<Result<Value, String>> {
-    let (grammar, node_types) = grammar(language)?;
+pub fn parse(language: &str, text: &str) -> Option<Result<Tree, String>> {
+    let (grammar, _) = grammar(language)?;
     let mut parser = Parser::new();
     if let Err(e) = parser.set_language(&grammar) {
         return Some(Err(format!("the grammar of {language} does not load: {e}")));
     }
-    let Some(tree) = parser.parse(text, None) else {
-        return Some(Err("the parser stopped".to_owned()));
-    };
+    Some(
+        parser
+            .parse(text, None)
+            .ok_or_else(|| "the parser stopped".to_owned()),
+    )
+}
+
+/// The tree a policy is given for `tree`, the tree-sitter tree of `text`, a
+/// file of `language`.
+///
+/// # Errors
+///
+/// The tree is deeper than zoll walks, or holds too much text.
+pub fn value(language: &str, text: &str, tree: &Tree) -> Result<Value, String> {
+    let node_types = grammar(language).map_or("[]", |(_, node_types)| node_types);
     let builder = Builder {
         text,
         multiple: multiple(language, node_types),
         columns: Columns::new(text),
         text_left: Cell::new(text.len().saturating_mul(MAX_TEXT_RATIO).max(MIN_TEXT)),
     };
-    Some(builder.node(tree.root_node(), 0))
+    builder.node(tree.root_node(), 0)
 }
 
 /// The fields that may hold several nodes, by the type of their node.

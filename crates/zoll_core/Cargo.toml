@@ -114,6 +114,7 @@ zig = ["dep:tree-sitter-zig"]
 globset.workspace = true
 ignore.workspace = true
 rayon.workspace = true
+regex.workspace = true
 regorus.workspace = true
 saphyr-parser.workspace = true
 serde.workspace = true
@@ -160,7 +161,14 @@ tree-sitter-swift = { workspace = true, optional = true }
 tree-sitter-typescript = { workspace = true, optional = true }
 tree-sitter-xml = { workspace = true, optional = true }
 tree-sitter-zig = { workspace = true, optional = true }
+tree-sitter-yaml.workspace = true
 zoll_grammars.workspace = true
+
+# `make queries`: Helix's injection queries into `queries/`. Its tests run
+# with the crate's.
+[[example]]
+name = "sync_queries"
+test = true
 
 [lints]
 workspace = true

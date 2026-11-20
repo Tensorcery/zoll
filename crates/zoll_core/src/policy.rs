@@ -18,6 +18,9 @@ use crate::walk::relative;
 /// How much a result weighs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
+    /// zoll's own word on what it could not check: shown, never fails the
+    /// run.
+    Notice,
     /// A `warn` rule's: shown, and fails the run only with `fail-on = "warn"`.
     Warn,
     /// A `deny` or `violation` rule's: fails the run.

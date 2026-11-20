@@ -19,6 +19,12 @@ allow = ["MIT", "Apache-2.0", "Unicode-3.0", "BSD-3-Clause", "ISC", "Zlib"]
 confidence-threshold = 0.9
 # The list is what zoll accepts, not what it uses today.
 unused-allowed-license = "allow"
+# zoll's own crates embed Helix's injection queries: those files stay
+# MPL-2.0 (file-level), and no dependency may bring it.
+exceptions = [
+  { crate = "zoll", allow = ["MPL-2.0"] },
+  { crate = "zoll_core", allow = ["MPL-2.0"] },
+]
 
 [bans]
 multiple-versions = "warn"

@@ -187,7 +187,8 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
                 relative,
                 language,
             };
-            let evaluations = input::evaluations(&file, &input::read(&file)?)?;
+            // What zoll notes is for `check` to report; `inspect` shows the input.
+            let (evaluations, _) = input::evaluations(&file, &input::read(&file)?)?;
             serde_json::to_writer_pretty(&mut *out, &evaluations).map_err(|e| stdout(e.into()))?;
             writeln!(out).map_err(stdout)?;
             return Ok(false);

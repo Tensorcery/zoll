@@ -3,6 +3,7 @@
 
 mod yaml;
 
+use std::collections::HashMap;
 use std::ops::Range;
 use std::path::Path;
 
@@ -40,6 +41,15 @@ pub enum Step {
 }
 
 impl Step {
+    /// The step as a policy writes it.
+    #[must_use]
+    pub fn to_json(&self) -> Value {
+        match self {
+            Self::Key(key) => Value::String(key.clone()),
+            Self::Index(i) => Value::from(*i),
+        }
+    }
+
     /// A step from its JSON: a string, or a whole number from 0.
     #[must_use]
     pub fn from_json(value: &Value) -> Option<Self> {
@@ -78,6 +88,12 @@ impl Place {
             span: start..span.end.clamp(start, text.len()),
         }
     }
+}
+
+/// Whether `language` is read as data rather than as code.
+#[must_use]
+pub fn is_data(language: &str) -> bool {
+    matches!(language, "yaml" | "json" | "toml")
 }
 
 /// The documents of a data file, each evaluated on its own: the documents of
@@ -179,6 +195,27 @@ pub fn locate(language: &str, text: &str, origin: Origin, path: &[Step]) -> Plac
         text,
         found.unwrap_or(0..text.chars().next().map_or(0, char::len_utf8)),
     )
+}
+
+/// The path of each place of a YAML stream, by the byte it starts at: the
+/// key of a mapping entry, the node of a sequence item. Where two start at
+/// one byte (an item and its first key), the longer path is kept.
+#[must_use]
+pub fn yaml_paths(text: &str) -> HashMap<usize, Vec<Step>> {
+    let bytes: Vec<usize> = text.char_indices().map(|(i, _)| i).collect();
+    let mut paths: HashMap<usize, Vec<Step>> = HashMap::new();
+    for places in yaml::places(text).unwrap_or_default() {
+        for (path, span) in places {
+            let byte = bytes.get(span.start.index()).copied().unwrap_or(text.len());
+            let longer = paths
+                .get(&byte)
+                .is_none_or(|known| known.len() < path.len());
+            if longer {
+                paths.insert(byte, path);
+            }
+        }
+    }
+    paths
 }
 
 fn locate_yaml(text: &str, document: usize, path: &[Step]) -> Option<Range<usize>> {

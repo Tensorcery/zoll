@@ -20,7 +20,7 @@ pub(crate) fn text(
     out: &mut impl Write,
 ) -> io::Result<bool> {
     let renderer = Renderer::styled();
-    let (mut denied, mut warned) = (0, 0);
+    let (mut denied, mut warned, mut noted) = (0, 0, 0);
     for file in checked {
         let path = shown(&file.file.path, cwd);
         for found in &file.found {
@@ -33,6 +33,10 @@ pub(crate) fn text(
                     warned += 1;
                     Level::WARNING
                 }
+                Severity::Notice => {
+                    noted += 1;
+                    Level::NOTE
+                }
             };
             let snippet = Snippet::source(file.text.as_str())
                 .path(path.as_str())
@@ -43,22 +47,22 @@ pub(crate) fn text(
             writeln!(out, "{}\n", renderer.render(&[title.element(snippet)]))?;
         }
     }
-    if denied + warned > 0 {
-        writeln!(out, "{}", summary(denied, warned))?;
+    if denied + warned + noted > 0 {
+        writeln!(out, "{}", summary(denied, warned, noted))?;
     }
     Ok(denied > 0 || (fail_on == FailOn::Warn && warned > 0))
 }
 
-fn summary(denied: usize, warned: usize) -> String {
-    let count =
-        |n: usize, one: &str, many: &str| format!("{n} {}", if n == 1 { one } else { many });
-    match (denied, warned) {
-        (_, 0) => count(denied, "violation", "violations"),
-        (0, _) => count(warned, "warning", "warnings"),
-        _ => format!(
-            "{}, {}",
-            count(denied, "violation", "violations"),
-            count(warned, "warning", "warnings")
-        ),
-    }
+/// `2 violations, 1 warning`: each kind there is, counted.
+fn summary(denied: usize, warned: usize, noted: usize) -> String {
+    [
+        (denied, "violation", "violations"),
+        (warned, "warning", "warnings"),
+        (noted, "notice", "notices"),
+    ]
+    .into_iter()
+    .filter(|(n, _, _)| *n > 0)
+    .map(|(n, one, many)| format!("{n} {}", if n == 1 { one } else { many }))
+    .collect::<Vec<_>>()
+    .join(", ")
 }

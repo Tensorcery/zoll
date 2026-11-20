@@ -2,7 +2,7 @@
 # when these pass here.
 
 .DEFAULT_GOAL := help
-.PHONY: help install fmt lint test build
+.PHONY: help install fmt lint test build queries
 
 UV := env -u VIRTUAL_ENV uv run
 # zizmor's online audits ask GitHub; the token is gh's own.
@@ -43,6 +43,9 @@ endif
 
 test:     ## the tests; a changed snapshot fails until `cargo insta review` takes it
 	cargo test --locked --all-features
+
+queries:  ## Helix's injection queries into queries/, at the commit sync_queries pins
+	cargo run --locked -p zoll_core --example sync_queries
 
 build:    ## the wheel for this platform, into dist/
 	uv build --wheel
