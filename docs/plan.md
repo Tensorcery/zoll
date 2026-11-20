@@ -151,13 +151,15 @@ tests, over `file://`, and on conftest's examples fetched from GitHub;
 
 ## 8. Output formats
 
-- [ ] `--format json`: one object per violation, with the fragment chain
-- [ ] `--format github`: workflow commands that annotate the PR diff
-- [ ] `--format sarif`: SARIF 2.1.0, `columnKind: unicodeCodePoints`,
-      accepted by GitHub code scanning
+- [x] `--format json`: one object per violation, with the fragment chain
+- [x] `--format github`: workflow commands that annotate the PR diff
+- [x] `--format sarif`: SARIF 2.1.0, `columnKind: unicodeCodePoints`,
+      accepted by GitHub code scanning (valid against the OASIS schema; not
+      uploaded yet)
 
 **Checkpoint:** a PR in a test repository shows zoll's violations as
-annotations and in the Security tab.
+annotations and in the Security tab. Not run yet: it needs a test
+repository on GitHub, and stage 9's workflow to run zoll in it.
 
 ## 9. Release
 

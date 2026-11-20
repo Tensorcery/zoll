@@ -476,11 +476,23 @@ config.
   document - a string result cannot say more, so a policy returns `at` to be
   shown at its line. conftest takes the same object and keeps `at` as
   metadata, so one policy serves both.
-- `json`: one object per violation - rule id, severity (deny/warn), message,
-  path, start, end, and the fragment chain it was found through.
-- `github`: workflow commands, so violations annotate the PR diff.
-- `sarif`: SARIF 2.1.0 for GitHub code scanning; minimal structs, only the
-  fields zoll emits.
+- `json`: an array, one object per violation - `rule`, `severity` (`deny`,
+  `warn` or `notice`), `message`, `path`, `start` and `end` (each `line` and
+  `column`), `fragments`, and `metadata` when the result had other keys.
+  `fragments` is the chain it was found through, the outermost first, each
+  `{"language", "at"}` with `at` where the fragment sits in its host, as
+  `data.zoll.file.host.at` has it (8.3); empty for a result on the file.
+- `github`: one workflow command per violation, so violations annotate the
+  PR diff: `::error file=…,line=…,col=…,endLine=…,endColumn=…,title=<rule>::<message>`,
+  `warning` for `warn` and `notice` for a notice, escaped as GitHub escapes.
+- `sarif`: SARIF 2.1.0 for GitHub code scanning, built as JSON with only the
+  fields zoll emits: one run, the rules that have results in it, each result
+  with its `ruleId`, `level` (`error`, `warning`, `note`), message and region;
+  `columnKind: "unicodeCodePoints"`, `endColumn` past the last character.
+  The path is relative to the working directory, percent-encoded as a URI.
+
+`path` is the path as the text report shows it: relative to the working
+directory when the file is under it.
 
 ## 13. Risks
 
