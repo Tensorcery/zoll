@@ -80,8 +80,9 @@ puts it at its line, and conftest still takes that policy.
 ## 4. Code
 
 - [x] grammars compiled in, the base set of section 7 behind Cargo
-      features, the default feature set = the base set (their own crates,
-      awk and jq vendored: section 15, item 6)
+      features, the default feature set = the base set (their own crates;
+      awk, gotmpl, jq, just, perl and scss vendored: section 15, items 6
+      and 7)
 - [x] a code file becomes the tree of section 8.2: named nodes, `fields` and
       `children`, `text` and `start`/`end` in every node (`text` on every
       node, not the leaves only: section 8.2)
@@ -89,28 +90,30 @@ puts it at its line, and conftest still takes that policy.
 - [x] `at` as a node resolves to its position
 - [x] ERROR nodes stay in the tree, typed `ERROR`
 - [x] `zoll languages` lists the compiled-in languages
-- [x] a release build's binary size is measured and written down: 54 MiB
-      with the base set (section 7)
+- [x] a release build's binary size is measured and written down: 70 MiB
+      with the base set of 50 languages, 8 MiB gzipped (section 7)
 
 **Checkpoint:** a `package bash` policy reports `curl | sh` in a `.sh`
 file at its line; `zoll inspect script.sh` shows the tree.
 
 ## 5. Embedded code
 
-- [ ] the sync script copies Helix's injection queries first and
-      nvim-treesitter's for the languages Helix lacks, at pinned commits,
-      strips editor-only directives and lists what it dropped (section 6,
-      section 14)
-- [ ] the query engine: the captures, properties and predicates of section 14
-- [ ] fragments found in data documents and in code trees, to any depth
-- [ ] a fragment's text is the decoded value; a segmented map takes its
+- [x] the sync script copies Helix's injection queries at a pinned commit,
+      strips editor-only directives and lists what it left out (section 6,
+      section 14); nvim-treesitter is not needed: Helix has a file for every
+      language of the base set that has one (section 14)
+- [x] the query engine: the captures, properties and predicates of section 14
+- [x] fragments found in data documents and in code trees, to any depth
+- [x] a fragment's text is the decoded value; a segmented map takes its
       positions back through every host to the real file
-- [ ] a fragment is evaluated as a file of its own, with `data.zoll.file.host`
+- [x] a fragment is evaluated as a file of its own, with `data.zoll.file.host`
       (section 8.3)
-- [ ] a fragment whose language is not compiled in: notice `zoll.unchecked`
+- [x] a fragment whose language is not compiled in, or that does not parse:
+      notice `zoll.unchecked` (section 14)
 - [x] a data file that does not parse: warn `zoll.parse` (done in stage 3)
-- [ ] the license of the wheel and the crates becomes `MIT AND MPL-2.0 AND
-      Apache-2.0`, with the license texts shipped
+- [x] the license of the wheel and the crates becomes `MIT AND MPL-2.0 AND
+      Apache-2.0` (the wheel's adds `BSD-3-Clause`, for the vendored
+      grammars), with the license texts shipped
 
 **Checkpoint:** a policy on bash reports a `curl | sh` inside a workflow's
 `run:` at its real line in the `.yml`; a policy on awk reports inside the

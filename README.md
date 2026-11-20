@@ -13,8 +13,9 @@ runs your Rego policies over all of it.
 
 > **Status: design.** The engine is not written yet; what follows is the
 > agreed interface ([docs/design.md](docs/design.md)). Today it runs
-> Rego policies over YAML, JSON and TOML, as conftest does, and over the
-> tree-sitter tree of code; the code embedded in files comes next.
+> Rego policies over YAML, JSON and TOML, as conftest does, over the
+> tree-sitter tree of code, and over the code embedded in either; inline
+> suppression and policies pinned from git come next.
 
 ## How it works
 

@@ -8,21 +8,41 @@ is a policy's call, outside this repository.
 
 ## Where the files come from
 
-They are copied, not written, by a sync script at a pinned commit of each
-source (docs/design.md, sections 6 and 14):
+`injections.scm` is copied, not written, by `make queries` (the
+`sync_queries` example of `zoll_core`) at the Helix commit it pins
+(docs/design.md, sections 6 and 14):
 
-1. Helix, `runtime/queries/<language>/injections.scm` (MPL-2.0) - first,
-   since zoll implements its injection semantics;
+1. Helix, `runtime/queries/<language>/injections.scm` (MPL-2.0), with the
+   files it `; inherits:` read in - first, since zoll implements its
+   injection semantics;
 2. nvim-treesitter (Apache-2.0) - only for a language Helix has no file for.
+   None of the base set needs it today, so the script does not fetch it yet.
 
 One source per language, never merged. The script strips what zoll does not
-evaluate (editor-only directives such as Neovim's `#offset!`), drops an
-injection whose predicate zoll cannot evaluate and lists it. Updating is
-raising the pinned commit and running the script again; the diff is
-reviewed like any other.
+evaluate (editor-only directives such as Neovim's `#offset!`) and leaves out
+an injection that:
 
-Each copied file keeps its license header and stays a file of its own; a
-part nvim-treesitter wrote inside a Helix file keeps its attribution. A file
-zoll writes itself - for a gap such as SQL in Python strings - is MIT, like
-the rest of the repository. jscpd skips this directory: the sources repeat
-each other by design.
+- names a language zoll does not have: `comment`, `jsdoc`, Lua patterns,
+  format strings, `markdown.inline`;
+- uses a predicate zoll does not evaluate (zoll evaluates the `#eq?`,
+  `#match?` and `#any-of?` families and `#set!`);
+- does not compile against the grammar zoll is built with: most of
+  svelte's, some of kotlin's, just's and nginx's, all of dockerfile's.
+
+It prints each with its reason. A language left with no injection has no
+file. Updating is raising the pinned commit and running the script again;
+the diff is reviewed like any other.
+
+`languages.toml` is copied from Helix's `languages.toml` by the same script:
+each language and the regex an injection's language name (a Markdown
+fence's info string) is matched with, whole.
+
+`<language>/zoll.scm` is zoll's own, read after `injections.scm`, for what
+Helix's queries miss with zoll's grammar: `dockerfile/zoll.scm` finds a
+`RUN`'s shell, since tree-sitter-containerfile has no `shell_fragment`. It is
+MIT, like the rest of the repository; the script never touches it.
+
+Each copied file carries the MPL's notice and stays a file of its own; a
+part nvim-treesitter wrote inside a Helix file keeps its attribution. The
+license texts are `LICENSE-MPL-2.0` and `LICENSE-Apache-2.0` here. jscpd
+skips this directory: the sources repeat each other by design.

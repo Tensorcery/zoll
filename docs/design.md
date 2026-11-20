@@ -108,7 +108,9 @@ Repository data, read at build time:
 
 | Path | Holds |
 |---|---|
-| `queries/<language>/injections.scm` | where a language holds code of another (section 6) |
+| `queries/<language>/injections.scm` | where a language holds code of another, copied from Helix (section 6) |
+| `queries/<language>/zoll.scm` | zoll's own, where Helix's miss with zoll's grammar |
+| `queries/languages.toml` | Helix's `injection-regex` of each language, for the names injections give |
 
 A third crate appears only when something earns it (a SARIF model, test
 helpers), not ahead of time.
@@ -126,7 +128,18 @@ of its info string.
   header; nvim parts inside Helix files keep their attribution. Updating is
   raising the commit and re-running the script; the diff is reviewed.
 - The sync script strips editor-only directives zoll does not evaluate
-  (e.g. Neovim's `#offset!`).
+  (e.g. Neovim's `#offset!`). It leaves out an injection that names a
+  language zoll does not have (`comment`, `jsdoc`, Lua patterns), uses a
+  predicate zoll does not evaluate, or does not compile against the grammar
+  zoll is built with, and lists each.
+- An injection Helix's queries miss with zoll's grammar is written by zoll in
+  `queries/<language>/zoll.scm`, read after Helix's file: a Dockerfile `RUN`
+  (tree-sitter-containerfile has no `shell_fragment` node).
+- An injection that names its language by a capture (a Markdown fence's
+  info string) is matched with zoll's names first, then with Helix's
+  `injection-regex` of each language, the whole name; `sync` copies those
+  into `queries/languages.toml`. A name no language has (`text`, `console`)
+  is not a fragment.
 - Semantics follow Helix's tree-house: captures `@injection.content`,
   `@injection.language`, `@injection.filename`, `@injection.shebang`;
   properties `injection.language`, `injection.combined`,
@@ -135,8 +148,10 @@ of its info string.
 - Coverage is never total: a string whose language no context reveals is
   not a fragment. zoll writes only the gaps (e.g. SQL in Python strings) and
   the tests.
-- The editor maps also mark comments and regexes; v1 keeps them. Whether to
-  limit which languages become fragments is decided on real files later.
+- The editor maps also mark comments and regexes. Regexes are kept (regex is
+  in the base set); comments are not, since zoll has no grammar for them.
+  Whether to limit which languages become fragments is decided on real files
+  later.
 - User-defined injections in the config are not in v1.
 
 ## 7. Languages and distribution
@@ -151,8 +166,9 @@ of its info string.
   tree-sitter-language-pack was the first idea and was dropped: its build
   downloads the grammar sources from a release and checks them against a hash
   from the same server.
-- YAML, JSON and TOML are read as data (8.1) and are always there; they need
-  no grammar.
+- YAML, JSON and TOML are read as data (8.1) and are always there. YAML's
+  grammar (`tree-sitter-yaml`) is always compiled in as well: its tree is
+  where the injection queries find a workflow's `run:`.
 - Each language is a Cargo feature of its name; `base` is the set below and
   is the default.
 - `zoll-lint` (PyPI) carries the binary with the base set, 50 languages:
@@ -281,9 +297,14 @@ own document or tree. A policy about bash runs on `.sh` files, on bash in a
 ```
 
 A file has no `host`. A fragment's `host.at` is a path when the host is a
-data document and a node (as in 8.2) when the host is code; a fragment in a
-fragment names the fragment as its host. zoll's own facts live under
-`data.zoll`, never inside `input`.
+data document and a node when the host is code: its `type`, `text`, `start`
+and `end` as in 8.2, without the nodes under it. A fragment in a fragment
+names the fragment as its host, and that host has its own `host`, down to
+the file. zoll's own facts live under `data.zoll`, never inside `input`.
+
+A fragment's `input` is built from its decoded text (section 14): the
+`start` and `end` of its nodes count lines and columns in that text, and
+zoll maps a result's place back to the file.
 
 ### 8.4 Which policies run where
 
@@ -481,7 +502,21 @@ discussed with the owner; they are the author's calls, open to correction.
   evaluate is dropped by the sync script and listed in its output.
 - **A fragment whose language is not installed** is reported as a notice
   (`zoll.unchecked`, printed, never a failure), so a user knows that code was
-  not checked.
+  not checked. So is a fragment that does not parse as its language (found
+  while building stage 5): the body of Rust's `json!` holds Rust
+  expressions, a Markdown example is cut short with `...`; the guess was the
+  host's, and a warning on each would be noise. A file that does not parse
+  stays `zoll.parse`, a warning.
+- **What is decoded** (stage 5): a YAML block scalar (its header gone, its
+  indentation removed, folded and chomped as its indicators say), a YAML
+  plain scalar (its lines folded), a shell string in single quotes (without
+  them). Other content is the node's text, less its children unless the
+  pattern includes them. The matches of an `injection.combined` pattern are
+  one fragment, a line break between them unless the host continues the
+  line (`\` at its end).
+- **Helix only, for now** (stage 5): Helix has a file for every language of
+  the base set that has one, so nvim-treesitter is not copied; it stays the
+  source for a language Helix lacks.
 - **Parse failures.** tree-sitter always yields a tree: ERROR nodes stay in
   it, typed `ERROR`, and policies see them. A data format that does not
   parse (Helm templates, `${{ }}` that breaks YAML) is a violation with the
