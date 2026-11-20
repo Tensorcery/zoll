@@ -255,7 +255,9 @@ then.
 - a tree nested deeper than 512, or whose text is more than 64 times the
   file's size (at least 1 MiB is allowed), is refused: the file gets a
   `zoll.parse` warning. Text on every node would otherwise let a deep file
-  copy itself hundreds of times over.
+  copy itself hundreds of times over. The budget is the file's: its
+  fragments' trees (8.3) spend from it too, and one that overruns it is
+  refused with the same warning.
 
 ```json
 {"type": "program", "text": "ls | awk '{print $1}'\n",
@@ -505,8 +507,10 @@ discussed with the owner; they are the author's calls, open to correction.
   not checked. So is a fragment that does not parse as its language (found
   while building stage 5): the body of Rust's `json!` holds Rust
   expressions, a Markdown example is cut short with `...`; the guess was the
-  host's, and a warning on each would be noise. A file that does not parse
-  stays `zoll.parse`, a warning.
+  host's, and a warning on each would be noise. This is data only: code
+  always parses, and a fragment's tree zoll refuses (too deep, past the
+  file's text budget) is `zoll.parse`, a warning, as a file's is. A file
+  that does not parse stays `zoll.parse` too.
 - **What is decoded** (stage 5): a YAML block scalar (its header gone, its
   indentation removed, folded and chomped as its indicators say), a YAML
   plain scalar (its lines folded), a shell string in single quotes (without
