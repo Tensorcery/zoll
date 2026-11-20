@@ -113,6 +113,7 @@ pub(crate) fn apply(
 fn unused(text: &str, span: Range<usize>, message: String) -> Found {
     Found {
         place: Place::of(text, span),
+        fragments: Vec::new(),
         violation: Violation {
             rule: UNUSED.to_owned(),
             severity: Severity::Warn,

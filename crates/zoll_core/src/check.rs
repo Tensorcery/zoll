@@ -4,6 +4,7 @@
 use std::ops::Range;
 
 use rayon::prelude::*;
+use serde_json::{Value, json};
 
 use crate::document::{self, Place};
 use crate::error::{Error, line_column_span};
@@ -31,6 +32,10 @@ pub struct Found {
     pub violation: Violation,
     /// Where in the file.
     pub place: Place,
+    /// The fragments it was found through, the outermost first: each
+    /// `{"language", "at"}`, `at` where it sits in its host (section 8.3).
+    /// Empty for a result on the file itself.
+    pub fragments: Vec<Value>,
 }
 
 pub use crate::input::{PARSE, UNCHECKED};
@@ -75,12 +80,18 @@ fn check_file(
                 for violation in policies.check(source.language, evaluation)? {
                     let span = local_span(&violation, evaluation);
                     let place = Place::of(&text, source.map.span(span));
-                    found.push(Found { violation, place });
+                    let fragments = chain(&evaluation.data["zoll"]["file"]);
+                    found.push(Found {
+                        violation,
+                        place,
+                        fragments,
+                    });
                 }
             }
             for note in notes {
                 found.push(Found {
                     place: Place::of(&text, note.span),
+                    fragments: Vec::new(),
                     violation: Violation {
                         rule: note.rule.to_owned(),
                         severity: note.severity,
@@ -96,6 +107,7 @@ fn check_file(
         // breaks the YAML - is a warning, not the end of the run.
         Err(Error::Source(error)) => found.push(Found {
             place: Place::of(&text, error.span.unwrap_or(0..0)),
+            fragments: Vec::new(),
             violation: Violation {
                 rule: PARSE.to_owned(),
                 severity: Severity::Warn,
@@ -119,6 +131,18 @@ fn check_file(
         ))
     });
     Ok(Some(Checked { file, text, found }))
+}
+
+/// The fragments `data.zoll.file` was reached through, the outermost
+/// first.
+fn chain(file: &Value) -> Vec<Value> {
+    let host = &file["host"];
+    if host.is_null() {
+        return Vec::new();
+    }
+    let mut chain = chain(host);
+    chain.push(json!({"language": file["language"], "at": host["at"]}));
+    chain
 }
 
 /// The bytes a violation points at, in the text of its evaluation: its

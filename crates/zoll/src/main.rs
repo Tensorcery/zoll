@@ -56,7 +56,6 @@ enum Command {
         paths: Vec<PathBuf>,
 
         /// How violations are printed.
-        #[expect(dead_code, reason = "read once policies run")]
         #[arg(long, value_enum, default_value_t = Format::Text)]
         format: Format,
 
@@ -132,7 +131,7 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
             show_files,
             fail_on,
             locked,
-            ..
+            format,
         } => {
             let loaded = load_config(cli.config.as_deref(), cwd)?;
             let languages = Languages::new(&loaded.config.languages)?;
@@ -175,7 +174,7 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
                 Some(_) => FailOn::Deny,
                 None => loaded.config.fail_on,
             };
-            report::text(&checked, cwd, fail_on, out).map_err(stdout)
+            report::write(*format, &checked, cwd, fail_on, out).map_err(stdout)
         }
         Command::Inspect { file } => {
             let loaded = load_config(cli.config.as_deref(), cwd)?;
