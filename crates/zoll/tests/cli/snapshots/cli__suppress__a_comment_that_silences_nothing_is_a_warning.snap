@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/suppress.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: true
+exit_code: 0
+----- stdout -----
+warning[zoll.unused_ignore]: `zoll: ignore[bash.curl_pipe]` silences nothing on this line
+ --> a.sh:1:25
+  |
+1 | echo hi  # zoll: ignore[bash.curl_pipe]
+  |                         ^^^^^^^^^^^^^^
+
+1 warning
+
+----- stderr -----

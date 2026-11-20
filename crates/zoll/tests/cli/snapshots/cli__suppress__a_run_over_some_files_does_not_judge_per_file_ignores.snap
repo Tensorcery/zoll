@@ -1,0 +1,13 @@
+---
+source: crates/zoll/tests/cli/suppress.rs
+info:
+  program: zoll
+  args:
+    - check
+    - b.sh
+---
+success: true
+exit_code: 0
+----- stdout -----
+
+----- stderr -----

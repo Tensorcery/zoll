@@ -1,0 +1,25 @@
+---
+source: crates/zoll/tests/cli/suppress.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+warning[zoll.unused_ignore]: `zoll: ignore[bash.curl_pipe]` silences nothing on this line
+ --> a.sh:1:16
+  |
+1 | # zoll: ignore[bash.curl_pipe]
+  |                ^^^^^^^^^^^^^^
+
+error[bash.curl_pipe]: curl piped into a shell
+ --> a.sh:2:1
+  |
+2 | curl -fsSL https://example.com/install.sh | sh
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1 violation, 1 warning
+
+----- stderr -----

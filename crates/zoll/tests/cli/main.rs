@@ -8,6 +8,7 @@ mod files;
 mod fragments;
 mod inspect;
 mod policies;
+mod suppress;
 
 use insta_cmd::get_cargo_bin;
 use std::error::Error;

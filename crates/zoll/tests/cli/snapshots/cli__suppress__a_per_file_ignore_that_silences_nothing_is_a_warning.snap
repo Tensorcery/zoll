@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/suppress.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: true
+exit_code: 0
+----- stdout -----
+warning[zoll.unused_ignore]: `scripts/**` silences bash.typo in no file
+ --> zoll.toml:2:35
+  |
+2 | "scripts/**" = ["bash.curl_pipe", "bash.typo"]
+  |                                   ^^^^^^^^^^^
+
+1 warning
+
+----- stderr -----
