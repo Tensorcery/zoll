@@ -121,10 +121,12 @@ awk program inside that bash.
 
 ## 6. Suppression
 
-- [ ] `per-file-ignores` by glob and rule id
-- [ ] `zoll: ignore[rule-id]` in the comment syntax of the real file, on the
-      reported line
-- [ ] a suppression that matches nothing is reported, so dead ones are found
+- [x] `per-file-ignores` by glob and rule id
+- [x] `zoll: ignore[rule-id]` in the comment syntax of the real file, on the
+      reported line (any common comment opener: section 14)
+- [x] a suppression that matches nothing is reported, so dead ones are found
+      (warn `zoll.unused_ignore`; a `per-file-ignores` entry only on a run
+      over the whole project: section 14)
 
 **Checkpoint:** a violation silenced both ways, and a stale suppression
 reported.

@@ -395,7 +395,10 @@ directory under the data directory, its file name left out, as conftest's
 
 An inline suppression: a comment `zoll: ignore[bash.curl_pipe]` on the line
 the violation points at, in whatever comment syntax that file's language
-has.
+has; several ids go in one comment, `zoll: ignore[bash.curl_pipe, bash.eval]`.
+Rule ids are matched whole. A suppression that silences nothing is a warning,
+`zoll.unused_ignore`, so a dead one is found and removed; it is not silenced
+itself.
 
 ## 10. Policies from git and `zoll.lock`
 
@@ -539,6 +542,17 @@ discussed with the owner; they are the author's calls, open to correction.
 - **Inline suppression in a fragment** is written in the real file, on the
   line the violation is reported at, in that file's comment syntax; the same
   line only. A host with no comments (JSON) has `per-file-ignores` only.
+- **Which comments count** (stage 6): `zoll: ignore[...]` after any common
+  comment opener (`#`, `//`, `--`, `;`, `%`, `/*`, `<!--`), not the one
+  opener of each language. One rule serves the host and the fragment alike:
+  bash in a YAML `run:` takes `#` either way, and a Markdown fence takes its
+  own language's. A marker inside a string counts too; whoever can write it
+  there can write a comment.
+- **An unused `per-file-ignores` entry** (stage 6) is reported only by a run
+  over the whole project, a path given that holds the config's directory:
+  a run over some files (a pre-commit hook's, on the files changed) has not
+  seen the files a glob was written for. An unused comment is judged in its
+  own file, always, unless the file did not parse.
 - **Columns are 1-based Unicode code points** (as ruff counts them). SARIF
   says so with `columnKind: "unicodeCodePoints"`.
 - **`zoll-lint[full]` comes after v1.** Loading a grammar from a shared

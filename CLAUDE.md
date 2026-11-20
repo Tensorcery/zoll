@@ -24,7 +24,8 @@ anyone writes depends on it: changing it is a major release.
 The pipeline, per file: language → parse (data into its document, code into
 its tree-sitter tree) → fragments found by the injection queries → each
 fragment through the same steps as a file of its own → the policies of each
-language → every violation mapped back to `file:line:col` of the real file.
+language → every violation mapped back to `file:line:col` of the real file
+→ what `per-file-ignores` and `zoll: ignore[...]` comments silence dropped.
 
 ## Layout
 

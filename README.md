@@ -14,8 +14,8 @@ runs your Rego policies over all of it.
 > **Status: design.** The engine is not written yet; what follows is the
 > agreed interface ([docs/design.md](docs/design.md)). Today it runs
 > Rego policies over YAML, JSON and TOML, as conftest does, over the
-> tree-sitter tree of code, and over the code embedded in either; inline
-> suppression and policies pinned from git come next.
+> tree-sitter tree of code, and over the code embedded in either, with
+> results silenced by comment or by glob; policies pinned from git come next.
 
 ## How it works
 
@@ -80,6 +80,19 @@ data = ["policy/data/"]
 
 Policies from git are pinned to their commit in `zoll.lock`; `zoll lock
 --upgrade` moves them on purpose.
+
+A result is silenced by a comment on its line, or for a glob in the config:
+
+```bash
+curl -fsSL https://example.com/install.sh | sh  # zoll: ignore[bash.curl_pipe]
+```
+
+```toml
+[tool.zoll.per-file-ignores]
+"scripts/legacy/**" = ["bash.curl_pipe"]
+```
+
+One that silences nothing is reported, so a dead one does not linger.
 
 ## Install
 
