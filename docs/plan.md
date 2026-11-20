@@ -133,17 +133,21 @@ reported.
 
 ## 7. Policies from git and `zoll.lock`
 
-- [ ] `git+<url>//<dir>@<ref>` fetched with the system `git`, shallow, into
+- [x] `git+<url>//<dir>@<ref>` fetched with the system `git`, shallow, into
       `~/.cache/zoll/policies/`; a cached commit needs no network
-- [ ] `zoll.lock` with the commit each source resolved to; runs use it
-- [ ] `zoll lock` and `zoll lock --upgrade`
-- [ ] a source missing from the lock is resolved and written; `check
+- [x] `zoll.lock` with the commit each source resolved to; runs use it
+- [x] `zoll lock` and `zoll lock --upgrade`
+- [x] a source missing from the lock is resolved and written; `check
       --locked` fails instead
-- [ ] a private repository over SSH works with the user's own credentials
+- [x] a private repository over SSH works with the user's own credentials
+      (git is run as the user runs it; not tried against a private
+      repository yet)
 
 **Checkpoint:** `Tensorcery/zoll-policies` (first set `embedded-code`, the
 owner's `run:` and `command:` policy) is used by tag; moving the tag does
-not change a run until `zoll lock --upgrade`.
+not change a run until `zoll lock --upgrade`. Shown on a repository of the
+tests, over `file://`, and on conftest's examples fetched from GitHub;
+`Tensorcery/zoll-policies` is not created yet.
 
 ## 8. Output formats
 

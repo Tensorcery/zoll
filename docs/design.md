@@ -372,7 +372,7 @@ exclude = ["vendor/**"]            # .gitignore is always honoured
 policies = [
   "policy/",                                                            # a directory
   "git+https://github.com/Tensorcery/zoll-policies//embedded-code@v1.0.0",
-  "git+ssh://git@github.com/my-org/policies//k8s@3f2a9c1",              # a commit
+  "git+ssh://git@github.com/my-org/policies//k8s@3f2a9c1e8b0d4c6a5f7e9b2d1c3a4e5f6b7c8d9e", # a commit
 ]
 data = ["policy/data/"]           # JSON/YAML under data.*, as conftest --data
 
@@ -402,15 +402,25 @@ itself.
 
 ## 10. Policies from git and `zoll.lock`
 
-- A source is `git+<url>//<directory>@<tag-or-commit>`.
+- A source is `git+<url>//<directory>@<tag-or-commit>`. The `//` is the
+  first one after the URL's own `scheme://`; the ref is after the last `@`.
+  A commit is named in full: git fetches no commit by a prefix of its id. The
+  directory stays inside the repository (no `..`, not absolute).
 - Fetched with the system `git`, so every credential the user has for git
   works (SSH agent, credential helpers, `gh auth`). Shallow, the one commit,
-  into `~/.cache/zoll/policies/<hash>`; a cached commit needs no network.
-- `zoll.lock` records, per source, the commit its ref resolved to. Runs use
-  the locked commit, never the ref's current target.
+  into `~/.cache/zoll/policies/<commit>`, the commit's tree without its
+  `.git`; a cached commit needs no network. The cache is `$ZOLL_CACHE_DIR`
+  when set, else `zoll/policies` under `$XDG_CACHE_HOME` or `~/.cache`.
+- `zoll.lock`, beside the config, records per source the commit its ref
+  resolved to. Runs use the locked commit, never the ref's current target. It
+  is TOML: `version = 1`, and a table `policies` from each source, as the
+  config writes it, to its commit. A config with no git source has no lock.
 - `zoll lock` writes the lock for sources missing from it;
-  `zoll lock --upgrade` moves every ref to its current commit.
-- `zoll check --locked` fails (exit 2) when the lock and the config disagree.
+  `zoll lock --upgrade` moves every ref to its current commit. Each prints
+  the sources it moved, one line each: the source and the commit's first 12
+  characters. A source the config no longer names leaves the lock.
+- `zoll check --locked` fails (exit 2) when the lock and the config disagree:
+  a source the lock lacks, or one the config dropped.
 
 ## 11. Command line
 
@@ -539,6 +549,12 @@ discussed with the owner; they are the author's calls, open to correction.
 - **A source missing from `zoll.lock`**: `zoll check` resolves it and writes
   the lock, as `uv run` does, so the change shows in `git diff`; with
   `--locked` it fails instead.
+- **The cache is keyed by the commit alone** (stage 7), not by repository
+  and commit: a commit id names its tree, whichever URL it came from, so two
+  sources of one commit share it and no URL needs escaping into a path.
+- **A commit is named in full** (stage 7): a shallow fetch takes a ref or a
+  full id, never a prefix, and resolving a prefix would need the whole
+  history.
 - **Inline suppression in a fragment** is written in the real file, on the
   line the violation is reported at, in that file's comment syntax; the same
   line only. A host with no comments (JSON) has `per-file-ignores` only.

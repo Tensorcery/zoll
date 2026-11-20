@@ -15,7 +15,8 @@ runs your Rego policies over all of it.
 > agreed interface ([docs/design.md](docs/design.md)). Today it runs
 > Rego policies over YAML, JSON and TOML, as conftest does, over the
 > tree-sitter tree of code, and over the code embedded in either, with
-> results silenced by comment or by glob; policies pinned from git come next.
+> results silenced by comment or by glob and policies pinned from git; the
+> json, github and sarif formats come next.
 
 ## How it works
 
