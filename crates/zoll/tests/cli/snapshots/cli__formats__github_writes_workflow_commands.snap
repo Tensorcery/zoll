@@ -1,0 +1,17 @@
+---
+source: crates/zoll/tests/cli/formats.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--format"
+    - github
+---
+success: false
+exit_code: 1
+----- stdout -----
+::warning file=a b.sh,line=1,col=1,endLine=1,endColumn=8,title=bash.echo::echo: say it,%0Aonce
+::error file=a b.sh,line=2,col=1,endLine=2,endColumn=47,title=bash.curl_pipe::curl piped into a shell
+::error file=ci.yml,line=4,col=29,endLine=4,endColumn=45,title=awk.system::awk runs a command
+
+----- stderr -----

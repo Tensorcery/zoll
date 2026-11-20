@@ -5,6 +5,7 @@ mod commands;
 mod config;
 mod corpus;
 mod files;
+mod formats;
 mod fragments;
 mod git;
 mod inspect;

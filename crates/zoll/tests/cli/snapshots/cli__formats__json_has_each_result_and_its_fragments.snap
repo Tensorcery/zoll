@@ -1,0 +1,90 @@
+---
+source: crates/zoll/tests/cli/formats.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--format"
+    - json
+---
+success: false
+exit_code: 1
+----- stdout -----
+[
+  {
+    "end": {
+      "column": 8,
+      "line": 1
+    },
+    "fragments": [],
+    "message": "echo: say it,\nonce",
+    "metadata": {
+      "url": "https://example.com"
+    },
+    "path": "a b.sh",
+    "rule": "bash.echo",
+    "severity": "warn",
+    "start": {
+      "column": 1,
+      "line": 1
+    }
+  },
+  {
+    "end": {
+      "column": 47,
+      "line": 2
+    },
+    "fragments": [],
+    "message": "curl piped into a shell",
+    "path": "a b.sh",
+    "rule": "bash.curl_pipe",
+    "severity": "deny",
+    "start": {
+      "column": 1,
+      "line": 2
+    }
+  },
+  {
+    "end": {
+      "column": 45,
+      "line": 4
+    },
+    "fragments": [
+      {
+        "at": [
+          "jobs",
+          "build",
+          "steps",
+          0,
+          "run"
+        ],
+        "language": "bash"
+      },
+      {
+        "at": {
+          "end": {
+            "column": 35,
+            "line": 1
+          },
+          "start": {
+            "column": 13,
+            "line": 1
+          },
+          "text": "'{ system(\"rm \" $9) }'",
+          "type": "raw_string"
+        },
+        "language": "awk"
+      }
+    ],
+    "message": "awk runs a command",
+    "path": "ci.yml",
+    "rule": "awk.system",
+    "severity": "deny",
+    "start": {
+      "column": 29,
+      "line": 4
+    }
+  }
+]
+
+----- stderr -----
