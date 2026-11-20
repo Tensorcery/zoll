@@ -108,3 +108,28 @@ fn a_fragment_that_does_not_parse_is_a_notice() -> TestResult {
     assert_cmd_snapshot!(repo.zoll("").arg("check"));
     Ok(())
 }
+
+#[test]
+fn fragments_share_their_file_s_text_budget() -> TestResult {
+    // Each fence alone stays under the text a tree may hold; together they
+    // would copy the file far past 64 times. The later ones are refused.
+    let fence = format!(
+        "```python\nx = {}1{}\n```\n",
+        "(".repeat(400),
+        ")".repeat(400)
+    );
+    let repo = Repo::new(&[
+        (
+            "policy/python.rego",
+            "package python\n\ndeny_x contains \"x\" if false\n",
+        ),
+        ("README.md", &fence.repeat(20)),
+    ])?;
+    let output = repo.zoll("").arg("check").output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("warning[zoll.parse]: python in it: the text of its nodes"),
+        "{stdout}"
+    );
+    Ok(())
+}
