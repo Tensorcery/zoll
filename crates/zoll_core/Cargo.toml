@@ -119,6 +119,7 @@ regorus.workspace = true
 saphyr-parser.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+tempfile.workspace = true
 toml.workspace = true
 tree-sitter.workspace = true
 tree-sitter-bash = { workspace = true, optional = true }

@@ -98,23 +98,30 @@ struct Package {
 }
 
 impl Policies {
-    /// The config's policies and data, from its directory.
+    /// The config's policies and data, from its directory; a git source
+    /// from its directory in `git`, fetched before.
     ///
     /// # Errors
     ///
     /// A source that is not there or holds no policy, a policy that does
     /// not compile, `package main` unbound, data that does not parse.
-    pub fn load(root: &Path, config: &Config) -> Result<Self, Error> {
+    pub fn load(
+        root: &Path,
+        config: &Config,
+        git: &HashMap<String, PathBuf>,
+    ) -> Result<Self, Error> {
         let mut engine = Engine::new();
         engine.set_rego_v0(config.rego_version == RegoVersion::V0);
         let mut loaded = 0;
         for source in &config.policies {
-            if source.starts_with("git+") {
-                return Err(Error::Other(format!(
-                    "`{source}`: policies from git are not built yet"
-                )));
-            }
-            for path in files(root, source, &["rego"], "policies")? {
+            let dir = match git.get(source) {
+                Some(dir) => dir.clone(),
+                None if source.starts_with("git+") => {
+                    return Err(Error::Other(format!("`{source}` was not fetched")));
+                }
+                None => PathBuf::from(source),
+            };
+            for path in files(root, dir, &["rego"], "policies")? {
                 let text =
                     std::fs::read_to_string(&path).map_err(|e| Error::Io(path.clone(), e))?;
                 engine

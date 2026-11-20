@@ -11,6 +11,7 @@ use anstyle::{AnsiColor, Effects};
 use clap::builder::Styles;
 use clap::{ColorChoice, Parser, Subcommand, ValueEnum};
 use zoll_core::config::FailOn;
+use zoll_core::git::{self, Mode};
 use zoll_core::language::{self, LANGUAGES, Languages};
 use zoll_core::policy::Policies;
 use zoll_core::suppress::PerFile;
@@ -46,8 +47,6 @@ struct Cli {
     command: Command,
 }
 
-// The arguments of the commands not built yet are parsed, and read by the
-// stage that builds them (docs/plan.md).
 #[derive(Subcommand)]
 enum Command {
     /// Check files against the policies.
@@ -66,7 +65,6 @@ enum Command {
         fail_on: Option<String>,
 
         /// Fail when `zoll.lock` does not match the config's git policies.
-        #[expect(dead_code, reason = "read once policies come from git")]
         #[arg(long)]
         locked: bool,
 
@@ -83,7 +81,6 @@ enum Command {
     /// Pin each git policy source to its commit in `zoll.lock`.
     Lock {
         /// Move every source to the commit its ref points at now.
-        #[expect(dead_code, reason = "read once policies come from git")]
         #[arg(long)]
         upgrade: bool,
     },
@@ -129,11 +126,12 @@ fn main() -> ExitCode {
 
 /// The command; `true` when violations fail the run.
 fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
-    let name = match &cli.command {
+    match &cli.command {
         Command::Check {
             paths,
             show_files,
             fail_on,
+            locked,
             ..
         } => {
             let loaded = load_config(cli.config.as_deref(), cwd)?;
@@ -161,7 +159,9 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
                 }
                 return Ok(false);
             }
-            let policies = Policies::load(&loaded.root, &loaded.config)?;
+            let mode = if *locked { Mode::Locked } else { Mode::Check };
+            let git = git::resolve(&loaded.root, &loaded.config.policies, mode)?;
+            let policies = Policies::load(&loaded.root, &loaded.config, &git.dirs)?;
             let per_file = PerFile::new(&loaded.config.per_file_ignores)?;
             let mut checked = check::check(files, &policies, &per_file)?;
             // Only a run over the whole project has seen every file a
@@ -175,7 +175,7 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
                 Some(_) => FailOn::Deny,
                 None => loaded.config.fail_on,
             };
-            return report::text(&checked, cwd, fail_on, out).map_err(stdout);
+            report::text(&checked, cwd, fail_on, out).map_err(stdout)
         }
         Command::Inspect { file } => {
             let loaded = load_config(cli.config.as_deref(), cwd)?;
@@ -199,17 +199,24 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
             let (evaluations, _) = input::evaluations(&file, &input::read(&file)?)?;
             serde_json::to_writer_pretty(&mut *out, &evaluations).map_err(|e| stdout(e.into()))?;
             writeln!(out).map_err(stdout)?;
-            return Ok(false);
+            Ok(false)
         }
         Command::Languages => {
             for language in LANGUAGES.into_iter().filter(|l| language::compiled(l)) {
                 writeln!(out, "{language}").map_err(stdout)?;
             }
-            return Ok(false);
+            Ok(false)
         }
-        Command::Lock { .. } => "lock",
-    };
-    Err(Error::Other(format!("`zoll {name}` is not built yet")))
+        Command::Lock { upgrade } => {
+            let loaded = load_config(cli.config.as_deref(), cwd)?;
+            let mode = if *upgrade { Mode::Upgrade } else { Mode::Lock };
+            let git = git::resolve(&loaded.root, &loaded.config.policies, mode)?;
+            for (source, commit) in &git.changed {
+                writeln!(out, "{source} at {}", git::short(commit)).map_err(stdout)?;
+            }
+            Ok(false)
+        }
+    }
 }
 
 fn stdout(error: io::Error) -> Error {
