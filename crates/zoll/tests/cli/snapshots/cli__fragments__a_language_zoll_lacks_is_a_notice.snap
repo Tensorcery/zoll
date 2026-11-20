@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/fragments.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: true
+exit_code: 0
+----- stdout -----
+note[zoll.unchecked]: this code is not checked: zoll has no grammar for ocaml
+ --> README.md:4:1
+  |
+4 | let () = print_endline "hi"
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1 notice
+
+----- stderr -----

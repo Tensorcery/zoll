@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/fragments.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[awk.system]: awk runs a command
+ --> ci.yml:4:29
+  |
+4 |       - run: ls -l | awk '{ system("rm " $9) }'
+  |                             ^^^^^^^^^^^^^^^^
+
+1 violation
+
+----- stderr -----

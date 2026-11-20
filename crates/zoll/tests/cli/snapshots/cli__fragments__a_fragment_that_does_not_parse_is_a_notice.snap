@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/fragments.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: true
+exit_code: 0
+----- stdout -----
+note[zoll.unchecked]: this code is not checked: it does not parse as json: key must be a string
+ --> README.md:4:9
+  |
+4 | {"a": 1,,}
+  |         ^
+
+1 notice
+
+----- stderr -----

@@ -1,7 +1,7 @@
 //! Code: a file of a language with a grammar becomes its tree-sitter tree
 //! (docs/design.md, section 8.2), and policies run on it.
 
-use crate::{Repo, TestResult};
+use crate::{CURL_PIPE, Repo, TestResult};
 use insta_cmd::assert_cmd_snapshot;
 
 #[test]
@@ -53,18 +53,6 @@ fn errors_stay_in_the_tree() -> TestResult {
         .bind(|| assert_cmd_snapshot!(repo.zoll("").args(["inspect", "bad.sh"])));
     Ok(())
 }
-
-const CURL_PIPE: &str = r#"package bash
-
-# A pipe into a shell downloads and runs code nobody reviewed.
-deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
-	walk(input, [_, node])
-	node.type == "pipeline"
-	some cmd in node.children
-	cmd.type == "command"
-	cmd.fields.name.text == "curl"
-}
-"#;
 
 #[test]
 fn a_policy_points_at_a_node() -> TestResult {

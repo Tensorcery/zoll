@@ -66,8 +66,10 @@ fn zoll_inputs(corpus: &Path, name: &str) -> Result<Vec<Value>, Box<dyn Error>> 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(output.status.success(), "{name}: {stderr}");
     let evaluations: Vec<Value> = serde_json::from_slice(&output.stdout)?;
+    // The file's own documents; the fragments in it are not conftest's.
     Ok(evaluations
         .into_iter()
+        .filter(|evaluation| evaluation["data"]["zoll"]["file"]["host"].is_null())
         .map(|mut evaluation| numbers_as_floats(evaluation["input"].take()))
         .collect())
 }

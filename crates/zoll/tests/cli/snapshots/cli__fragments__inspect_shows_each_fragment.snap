@@ -1,0 +1,274 @@
+---
+source: crates/zoll/tests/cli/fragments.rs
+info:
+  program: zoll
+  args:
+    - inspect
+    - ci.yml
+---
+success: true
+exit_code: 0
+----- stdout -----
+[
+  {
+    "input": {
+      "jobs": {
+        "build": {
+          "steps": [
+            {
+              "run": "awk '{print $1}' list"
+            }
+          ]
+        }
+      }
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "ci.yml"
+        }
+      },
+      "zoll": {
+        "file": {
+          "language": "yaml",
+          "path": "ci.yml"
+        }
+      }
+    }
+  },
+  {
+    "input": {
+      "children": [
+        {
+          "end": {
+            "column": 22,
+            "line": 1
+          },
+          "fields": {
+            "argument": [
+              {
+                "end": {
+                  "column": 17,
+                  "line": 1
+                },
+                "start": {
+                  "column": 5,
+                  "line": 1
+                },
+                "text": "'{print $1}'",
+                "type": "raw_string"
+              },
+              {
+                "end": {
+                  "column": 22,
+                  "line": 1
+                },
+                "start": {
+                  "column": 18,
+                  "line": 1
+                },
+                "text": "list",
+                "type": "word"
+              }
+            ],
+            "name": {
+              "children": [
+                {
+                  "end": {
+                    "column": 4,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 1,
+                    "line": 1
+                  },
+                  "text": "awk",
+                  "type": "word"
+                }
+              ],
+              "end": {
+                "column": 4,
+                "line": 1
+              },
+              "start": {
+                "column": 1,
+                "line": 1
+              },
+              "text": "awk",
+              "type": "command_name"
+            }
+          },
+          "start": {
+            "column": 1,
+            "line": 1
+          },
+          "text": "awk '{print $1}' list",
+          "type": "command"
+        }
+      ],
+      "end": {
+        "column": 22,
+        "line": 1
+      },
+      "start": {
+        "column": 1,
+        "line": 1
+      },
+      "text": "awk '{print $1}' list",
+      "type": "program"
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "ci.yml"
+        }
+      },
+      "zoll": {
+        "file": {
+          "host": {
+            "at": [
+              "jobs",
+              "build",
+              "steps",
+              0,
+              "run"
+            ],
+            "language": "yaml",
+            "path": "ci.yml"
+          },
+          "language": "bash",
+          "path": "ci.yml"
+        }
+      }
+    }
+  },
+  {
+    "input": {
+      "children": [
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "end": {
+                            "column": 10,
+                            "line": 1
+                          },
+                          "start": {
+                            "column": 9,
+                            "line": 1
+                          },
+                          "text": "1",
+                          "type": "number"
+                        }
+                      ],
+                      "end": {
+                        "column": 10,
+                        "line": 1
+                      },
+                      "start": {
+                        "column": 8,
+                        "line": 1
+                      },
+                      "text": "$1",
+                      "type": "field_ref"
+                    }
+                  ],
+                  "end": {
+                    "column": 10,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 2,
+                    "line": 1
+                  },
+                  "text": "print $1",
+                  "type": "print_statement"
+                }
+              ],
+              "end": {
+                "column": 11,
+                "line": 1
+              },
+              "start": {
+                "column": 1,
+                "line": 1
+              },
+              "text": "{print $1}",
+              "type": "block"
+            }
+          ],
+          "end": {
+            "column": 11,
+            "line": 1
+          },
+          "start": {
+            "column": 1,
+            "line": 1
+          },
+          "text": "{print $1}",
+          "type": "rule"
+        }
+      ],
+      "end": {
+        "column": 11,
+        "line": 1
+      },
+      "start": {
+        "column": 1,
+        "line": 1
+      },
+      "text": "{print $1}",
+      "type": "program"
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "ci.yml"
+        }
+      },
+      "zoll": {
+        "file": {
+          "host": {
+            "at": {
+              "end": {
+                "column": 17,
+                "line": 1
+              },
+              "start": {
+                "column": 5,
+                "line": 1
+              },
+              "text": "'{print $1}'",
+              "type": "raw_string"
+            },
+            "host": {
+              "at": [
+                "jobs",
+                "build",
+                "steps",
+                0,
+                "run"
+              ],
+              "language": "yaml",
+              "path": "ci.yml"
+            },
+            "language": "bash",
+            "path": "ci.yml"
+          },
+          "language": "awk",
+          "path": "ci.yml"
+        }
+      }
+    }
+  }
+]
+
+----- stderr -----

@@ -1,0 +1,19 @@
+---
+source: crates/zoll/tests/cli/fragments.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+error[bash.curl_pipe]: curl piped into a shell
+  --> .github/workflows/ci.yml:10:11
+   |
+10 |           curl -fsSL https://example.com/install.sh | sh
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1 violation
+
+----- stderr -----

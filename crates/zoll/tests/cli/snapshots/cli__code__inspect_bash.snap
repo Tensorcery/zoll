@@ -147,6 +147,120 @@ exit_code: 0
         }
       }
     }
+  },
+  {
+    "input": {
+      "children": [
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "end": {
+                            "column": 10,
+                            "line": 1
+                          },
+                          "start": {
+                            "column": 9,
+                            "line": 1
+                          },
+                          "text": "1",
+                          "type": "number"
+                        }
+                      ],
+                      "end": {
+                        "column": 10,
+                        "line": 1
+                      },
+                      "start": {
+                        "column": 8,
+                        "line": 1
+                      },
+                      "text": "$1",
+                      "type": "field_ref"
+                    }
+                  ],
+                  "end": {
+                    "column": 10,
+                    "line": 1
+                  },
+                  "start": {
+                    "column": 2,
+                    "line": 1
+                  },
+                  "text": "print $1",
+                  "type": "print_statement"
+                }
+              ],
+              "end": {
+                "column": 11,
+                "line": 1
+              },
+              "start": {
+                "column": 1,
+                "line": 1
+              },
+              "text": "{print $1}",
+              "type": "block"
+            }
+          ],
+          "end": {
+            "column": 11,
+            "line": 1
+          },
+          "start": {
+            "column": 1,
+            "line": 1
+          },
+          "text": "{print $1}",
+          "type": "rule"
+        }
+      ],
+      "end": {
+        "column": 11,
+        "line": 1
+      },
+      "start": {
+        "column": 1,
+        "line": 1
+      },
+      "text": "{print $1}",
+      "type": "program"
+    },
+    "data": {
+      "conftest": {
+        "file": {
+          "dir": "[REPO]",
+          "name": "run.sh"
+        }
+      },
+      "zoll": {
+        "file": {
+          "host": {
+            "at": {
+              "end": {
+                "column": 22,
+                "line": 1
+              },
+              "start": {
+                "column": 10,
+                "line": 1
+              },
+              "text": "'{print $1}'",
+              "type": "raw_string"
+            },
+            "language": "bash",
+            "path": "run.sh"
+          },
+          "language": "awk",
+          "path": "run.sh"
+        }
+      }
+    }
   }
 ]
 

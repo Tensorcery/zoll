@@ -5,6 +5,7 @@ mod commands;
 mod config;
 mod corpus;
 mod files;
+mod fragments;
 mod inspect;
 mod policies;
 
@@ -16,6 +17,19 @@ use std::process::Command;
 use tempfile::TempDir;
 
 pub(crate) type TestResult = Result<(), Box<dyn Error>>;
+
+/// A bash policy: a pipe into a shell downloads and runs code nobody
+/// reviewed.
+pub(crate) const CURL_PIPE: &str = r#"package bash
+
+deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
+	walk(input, [_, node])
+	node.type == "pipeline"
+	some cmd in node.children
+	cmd.type == "command"
+	cmd.fields.name.text == "curl"
+}
+"#;
 
 pub(crate) fn zoll() -> Command {
     Command::new(get_cargo_bin("zoll"))
