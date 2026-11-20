@@ -13,6 +13,7 @@ use clap::{ColorChoice, Parser, Subcommand, ValueEnum};
 use zoll_core::config::FailOn;
 use zoll_core::language::{self, LANGUAGES, Languages};
 use zoll_core::policy::Policies;
+use zoll_core::suppress::PerFile;
 use zoll_core::{Error, SourceError, check, config, input, walk};
 
 mod report;
@@ -161,7 +162,14 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
                 return Ok(false);
             }
             let policies = Policies::load(&loaded.root, &loaded.config)?;
-            let checked = check::check(files, &policies)?;
+            let per_file = PerFile::new(&loaded.config.per_file_ignores)?;
+            let mut checked = check::check(files, &policies, &per_file)?;
+            // Only a run over the whole project has seen every file a
+            // `per-file-ignores` glob names.
+            let whole = paths.iter().any(|path| loaded.root.starts_with(path));
+            if whole && let Some(config) = &loaded.file {
+                per_file.report_unused(config, &loaded.root, &mut checked)?;
+            }
             let fail_on = match fail_on.as_deref() {
                 Some("warn") => FailOn::Warn,
                 Some(_) => FailOn::Deny,

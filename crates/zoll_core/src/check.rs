@@ -10,6 +10,7 @@ use crate::error::{Error, line_column_span};
 use crate::input::{self, Evaluation};
 use crate::language;
 use crate::policy::{At, Policies, Severity, Violation};
+use crate::suppress::{self, PerFile};
 use crate::walk::File;
 
 /// A file with what was found in it.
@@ -34,29 +35,40 @@ pub struct Found {
 
 pub use crate::input::{PARSE, UNCHECKED};
 
-/// Every file checked; those with nothing found are left out.
+/// Every file checked, less what `per_file` and the files' comments
+/// silence; those with nothing found are left out.
 ///
 /// # Errors
 ///
 /// A file that cannot be read, a rule that fails to evaluate.
-pub fn check(files: Vec<File>, policies: &Policies) -> Result<Vec<Checked>, Error> {
+pub fn check(
+    files: Vec<File>,
+    policies: &Policies,
+    per_file: &PerFile,
+) -> Result<Vec<Checked>, Error> {
     let checked: Result<Vec<_>, Error> = files
         .into_par_iter()
-        .map(|file| check_file(file, policies))
+        .map(|file| check_file(file, policies, per_file))
         .collect();
     let mut checked: Vec<Checked> = checked?.into_iter().flatten().collect();
     checked.sort_by(|a, b| a.file.cmp(&b.file));
     Ok(checked)
 }
 
-fn check_file(file: File, policies: &Policies) -> Result<Option<Checked>, Error> {
+fn check_file(
+    file: File,
+    policies: &Policies,
+    per_file: &PerFile,
+) -> Result<Option<Checked>, Error> {
     if !language::compiled(file.language) {
         // A language this zoll was built without: nothing to check it with.
         return Ok(None);
     }
     let text = input::read(&file)?;
     let mut found = Vec::new();
-    match input::evaluations(&file, &text) {
+    let evaluations = input::evaluations(&file, &text);
+    let evaluated = evaluations.is_ok();
+    match evaluations {
         Ok((evaluations, notes)) => {
             for evaluation in &evaluations {
                 let source = &evaluation.source;
@@ -95,6 +107,7 @@ fn check_file(file: File, policies: &Policies) -> Result<Option<Checked>, Error>
         }),
         Err(error) => return Err(error),
     }
+    suppress::apply(&file, &text, &mut found, per_file, evaluated);
     if found.is_empty() {
         return Ok(None);
     }

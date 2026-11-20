@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
+use toml::Spanned;
 
 use crate::error::{Error, SourceError};
 
@@ -43,7 +44,7 @@ pub struct Config {
     pub languages: BTreeMap<String, String>,
     /// A glob, bound to the rule ids not reported in the files it matches.
     #[serde(default)]
-    pub per_file_ignores: BTreeMap<String, Vec<String>>,
+    pub per_file_ignores: BTreeMap<String, Vec<Spanned<String>>>,
 }
 
 impl Default for Config {
@@ -100,6 +101,8 @@ pub struct Loaded {
     /// The directory of the config file found; the working directory when
     /// none was, or when `--config` named one.
     pub root: PathBuf,
+    /// The config file; `None` when there is none.
+    pub file: Option<PathBuf>,
 }
 
 /// The config of a directory: the first config file in it or in a directory
@@ -117,7 +120,11 @@ pub fn discover(dir: &Path) -> Result<Loaded, Error> {
             }
             if let Some(config) = parse(&path)? {
                 let root = root.to_owned();
-                return Ok(Loaded { config, root });
+                return Ok(Loaded {
+                    config,
+                    root,
+                    file: Some(path),
+                });
             }
         }
     }
@@ -125,6 +132,7 @@ pub fn discover(dir: &Path) -> Result<Loaded, Error> {
     Ok(Loaded {
         config: Config::default(),
         root,
+        file: None,
     })
 }
 
@@ -138,7 +146,11 @@ pub fn discover(dir: &Path) -> Result<Loaded, Error> {
 pub fn load(path: &Path, dir: &Path) -> Result<Loaded, Error> {
     let config = parse(path)?.unwrap_or_default();
     let root = dir.to_owned();
-    Ok(Loaded { config, root })
+    Ok(Loaded {
+        config,
+        root,
+        file: Some(path.to_owned()),
+    })
 }
 
 /// The config in a file; `None` for a `pyproject.toml` that has no

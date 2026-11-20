@@ -11,6 +11,7 @@ pub mod injection;
 pub mod input;
 pub mod language;
 pub mod policy;
+pub mod suppress;
 pub mod walk;
 
 pub use error::{Error, SourceError};
