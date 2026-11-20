@@ -70,8 +70,8 @@ fn check_file(file: File, policies: &Policies) -> Result<Option<Checked>, Error>
                 found.push(Found {
                     place: Place::of(&text, note.span),
                     violation: Violation {
-                        rule: UNCHECKED.to_owned(),
-                        severity: Severity::Notice,
+                        rule: note.rule.to_owned(),
+                        severity: note.severity,
                         message: note.message,
                         at: None,
                         line: None,

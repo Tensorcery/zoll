@@ -22,6 +22,13 @@ const MAX_TEXT_RATIO: usize = 64;
 /// The text every tree may hold, however small its file.
 const MIN_TEXT: usize = 1 << 20;
 
+/// The bytes of text the trees of a file of `len` bytes may hold in all:
+/// its own and its fragments', to any depth.
+#[must_use]
+pub fn text_budget(len: usize) -> Cell<usize> {
+    Cell::new(len.saturating_mul(MAX_TEXT_RATIO).max(MIN_TEXT))
+}
+
 /// The grammar of a language and its `node-types.json`, when zoll was built
 /// with it. YAML's is always there: its documents are read as data, its tree
 /// is where the injection queries look.
@@ -283,14 +290,20 @@ pub fn parse(language: &str, text: &str) -> Option<Result<Tree, String>> {
 ///
 /// # Errors
 ///
-/// The tree is deeper than zoll walks, or holds too much text.
-pub fn value(language: &str, text: &str, tree: &Tree) -> Result<Value, String> {
+/// The tree is deeper than zoll walks, or holds more text than `budget`
+/// has left, which it spends.
+pub fn value(
+    language: &str,
+    text: &str,
+    tree: &Tree,
+    budget: &Cell<usize>,
+) -> Result<Value, String> {
     let node_types = grammar(language).map_or("[]", |(_, node_types)| node_types);
     let builder = Builder {
         text,
         multiple: multiple(language, node_types),
         columns: Columns::new(text),
-        text_left: Cell::new(text.len().saturating_mul(MAX_TEXT_RATIO).max(MIN_TEXT)),
+        text_left: budget,
     };
     builder.node(tree.root_node(), 0)
 }
@@ -345,7 +358,7 @@ struct Builder<'a> {
     multiple: &'a Multiple,
     columns: Columns,
     /// The bytes of text the nodes not built yet may still take.
-    text_left: Cell<usize>,
+    text_left: &'a Cell<usize>,
 }
 
 impl Builder<'_> {

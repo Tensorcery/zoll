@@ -15,6 +15,7 @@ use crate::document::{self, Document, Origin, Place, Step};
 use crate::error::{Error, SourceError};
 use crate::injection::{self, Map, Target};
 use crate::language;
+use crate::policy::Severity;
 use crate::walk::File;
 
 /// The rule id of a file or fragment that does not parse (docs/design.md,
@@ -54,11 +55,15 @@ pub struct Source {
     pub map: Map,
 }
 
-/// Code in a file that zoll did not check: of a language it has no grammar
-/// for, or that does not parse as the language its host says (rule
-/// [`UNCHECKED`], a notice).
+/// What zoll itself has to say about the code in a file: a fragment it did
+/// not check ([`UNCHECKED`], a notice), or one whose tree it refused
+/// ([`PARSE`], a warning, as for a file).
 #[derive(Debug)]
 pub struct Note {
+    /// [`PARSE`] or [`UNCHECKED`].
+    pub rule: &'static str,
+    /// Its weight.
+    pub severity: Severity,
     /// Why.
     pub message: String,
     /// The bytes of the file it is about.
@@ -89,6 +94,7 @@ pub fn read(file: &File) -> Result<String, Error> {
 pub fn evaluations(file: &File, text: &str) -> Result<(Vec<Evaluation>, Vec<Note>), Error> {
     let mut walk = Walk {
         file,
+        budget: code::text_budget(text.len()),
         evaluations: Vec::new(),
         notes: Vec::new(),
     };
@@ -104,6 +110,8 @@ pub fn evaluations(file: &File, text: &str) -> Result<(Vec<Evaluation>, Vec<Note
 
 struct Walk<'a> {
     file: &'a File,
+    /// The text the file's trees may still hold, its fragments' included.
+    budget: std::cell::Cell<usize>,
     evaluations: Vec<Evaluation>,
     notes: Vec<Note>,
 }
@@ -135,7 +143,7 @@ impl Walk<'_> {
                 )));
             };
             let tree = tree.map_err(|message| failed(message, None))?;
-            let value = code::value(source.language, text, &tree)
+            let value = code::value(source.language, text, &tree, &self.budget)
                 .map_err(|message| failed(message, None))?;
             let document = Document {
                 value,
@@ -204,16 +212,32 @@ impl Walk<'_> {
             });
             let zoll = json!({"path": self.file.relative, "language": language, "host": host});
             match self.source(&child, &zoll, depth + 1) {
-                // Code that does not parse as what its host says it is (the
+                // Data that does not parse as what its host says it is (the
                 // body of Rust's `json!`, an example cut short) was not
-                // checked: a notice, not a warning.
-                Err(Error::Source(error)) => self.notes.push(Note {
-                    message: format!(
-                        "this code is not checked: it does not parse as {language}: {}",
-                        error.message
-                    ),
-                    span: child.map.span(error.span.unwrap_or(0..0)),
-                }),
+                // checked: a notice. Code always parses; a tree zoll refuses
+                // (too deep, too much text) is a warning, as for a file.
+                Err(Error::Source(error)) => {
+                    let span = child.map.span(error.span.unwrap_or(0..0));
+                    let said = if document::is_data(language) {
+                        Note {
+                            rule: UNCHECKED,
+                            severity: Severity::Notice,
+                            message: format!(
+                                "this code is not checked: it does not parse as {language}: {}",
+                                error.message
+                            ),
+                            span,
+                        }
+                    } else {
+                        Note {
+                            rule: PARSE,
+                            severity: Severity::Warn,
+                            message: format!("{language} in it: {}", error.message),
+                            span,
+                        }
+                    };
+                    self.notes.push(said);
+                }
                 result => result?,
             }
         }
@@ -222,6 +246,8 @@ impl Walk<'_> {
 
     fn unchecked(&mut self, span: Range<usize>, why: &str) {
         self.notes.push(Note {
+            rule: UNCHECKED,
+            severity: Severity::Notice,
             message: format!("this code is not checked: {why}"),
             span,
         });

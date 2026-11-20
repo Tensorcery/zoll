@@ -160,12 +160,12 @@ impl Map {
             }
             let mut at = run.to.start;
             while at < run.to.end {
+                // Runs are sorted and touch, so their ends only grow.
+                let later = outer.0.partition_point(|r| r.from + r.len <= at);
                 let next = outer
                     .0
-                    .iter()
-                    .map(|r| r.from + r.len)
-                    .find(|&end| end > at)
-                    .map_or(run.to.end, |end| end.min(run.to.end));
+                    .get(later)
+                    .map_or(run.to.end, |r| (r.from + r.len).min(run.to.end));
                 map.push(
                     run.from + (at - run.to.start),
                     next - at,
@@ -328,6 +328,7 @@ fn matched<'a>(
     tree: &'a Tree,
 ) -> Vec<Found<'a>> {
     let mut found: Vec<Found<'a>> = Vec::new();
+    let mut by_ranges: HashMap<Vec<(Range<usize>, &'a str)>, usize> = HashMap::new();
     let mut cursor = QueryCursor::new();
     let mut matches = cursor.matches(&injections.query, tree.root_node(), text.as_bytes());
     while let Some(m) = matches.next() {
@@ -386,10 +387,13 @@ fn matched<'a>(
         };
         // Two patterns on one node (a fence with a language and a shebang):
         // the one that names it.
-        match found.iter_mut().find(|f| f.ranges == found_here.ranges) {
-            Some(earlier) if earlier.guessed && !found_here.guessed => *earlier = found_here,
+        match by_ranges.get(&found_here.ranges) {
+            Some(&i) if found[i].guessed && !found_here.guessed => found[i] = found_here,
             Some(_) => {}
-            None => found.push(found_here),
+            None => {
+                by_ranges.insert(found_here.ranges.clone(), found.len());
+                found.push(found_here);
+            }
         }
     }
     found
