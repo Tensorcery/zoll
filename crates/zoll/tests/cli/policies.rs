@@ -402,19 +402,6 @@ fn no_policies() -> TestResult {
 }
 
 #[test]
-fn policies_from_git_not_built() -> TestResult {
-    let repo = Repo::new(&[
-        ("a.yml", "a: 1\n"),
-        (
-            "zoll.toml",
-            "policies = [\"git+https://github.com/Tensorcery/zoll-policies//embedded-code@v1.0.0\"]\n",
-        ),
-    ])?;
-    assert_cmd_snapshot!(repo.zoll("").arg("check"));
-    Ok(())
-}
-
-#[test]
 fn a_file_that_does_not_parse_is_a_warning() -> TestResult {
     let repo = repo(
         &[(

@@ -6,6 +6,7 @@ mod config;
 mod corpus;
 mod files;
 mod fragments;
+mod git;
 mod inspect;
 mod policies;
 mod suppress;
@@ -50,6 +51,11 @@ impl Repo {
             fs::write(path, text)?;
         }
         Ok(Self(dir))
+    }
+
+    /// Where it is.
+    pub(crate) fn path(&self) -> &Path {
+        self.0.path()
     }
 
     /// `zoll` started in `subdir` of the repository.

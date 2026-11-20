@@ -36,13 +36,6 @@ fn inspect_not_built() -> TestResult {
 }
 
 #[test]
-fn lock_not_built() -> TestResult {
-    let repo = Repo::new(&[])?;
-    assert_cmd_snapshot!(repo.zoll("").args(["lock", "--upgrade"]));
-    Ok(())
-}
-
-#[test]
 fn languages() {
     assert_cmd_snapshot!(zoll().arg("languages"));
 }
