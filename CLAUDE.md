@@ -74,9 +74,10 @@ the git hooks. Without it nothing checks a commit.
 
 `make lint` - rustfmt, clippy with every warning an error (with every
 language, and with none), cargo-deny, yamllint, shellcheck, actionlint,
-zizmor, pre-commit (jscpd). Regal runs once a `.rego` file is tracked; none
-is yet: the policies of the tests are Rust strings. It is the pre-push hook,
-with `make test`.
+zizmor, pre-commit (jscpd). There is no Regal: no `.rego` file is tracked,
+as the policies of the tests are Rust strings, and pre-commit would build
+it from source on every run for nothing; the first `.rego` brings it. It is
+the pre-push hook, with `make test`.
 
 `make test` - `cargo test`. A test whose snapshot changed fails; `cargo insta
 review` shows the difference and takes it.
