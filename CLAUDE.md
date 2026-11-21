@@ -79,6 +79,11 @@ as the policies of the tests are Rust strings, and pre-commit would build
 it from source on every run for nothing; the first `.rego` brings it. It is
 the pre-push hook, with `make test`.
 
+`make lint-windows` - clippy for Windows: the code only Windows compiles,
+checked without Windows. CI's lint job runs it; here it needs mingw-w64
+(`apt install gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64`) and a second
+build of every grammar, so no hook does.
+
 `make test` - `cargo test`. A test whose snapshot changed fails; `cargo insta
 review` shows the difference and takes it.
 

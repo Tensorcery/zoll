@@ -31,6 +31,11 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
       # rust-toolchain.toml names the toolchain; rustup installs it.
       - run: rustup toolchain install
+      # clippy for Windows (make lint-windows) builds the C of the grammars
+      # with mingw-w64.
+      - run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
       - uses: taiki-e/install-action@4a76afe23f9e08d2d9550fb56e556444e8611d21  # v2.90.4
         with:
           tool: cargo-deny@0.21.0
@@ -43,6 +48,7 @@ jobs:
         env:
           # zizmor asks GitHub about the actions the workflows pin.
           GH_TOKEN: ${{ github.token }}
+      - run: make lint-windows
 
   test:
     name: test (${{ matrix.os }})
