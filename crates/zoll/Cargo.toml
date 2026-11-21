@@ -68,6 +68,7 @@ annotate-snippets.workspace = true
 anstream.workspace = true
 anstyle.workspace = true
 clap.workspace = true
+rayon.workspace = true
 serde_json.workspace = true
 zoll_core.workspace = true
 

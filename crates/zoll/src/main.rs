@@ -4,6 +4,7 @@ use std::env;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::thread;
 
 use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use anstream::AutoStream;
@@ -103,7 +104,27 @@ const VIOLATIONS: u8 = 1;
 /// not load.
 const FAILED: u8 = 2;
 
+/// The stack of each thread that walks a tree. Windows gives its main thread
+/// 1 MiB, Linux 8: the limits on how deep a tree nests hold on every system
+/// only with a stack of their own.
+const STACK: usize = 16 << 20;
+
 fn main() -> ExitCode {
+    // Fails only when the pool is built already.
+    let _ = rayon::ThreadPoolBuilder::new()
+        .stack_size(STACK)
+        .build_global();
+    match thread::Builder::new().stack_size(STACK).spawn(command) {
+        // A panic has said what it was.
+        Ok(handle) => handle.join().unwrap_or(ExitCode::from(FAILED)),
+        Err(error) => {
+            let _ = writeln!(io::stderr(), "error: no thread to run in: {error}");
+            ExitCode::from(FAILED)
+        }
+    }
+}
+
+fn command() -> ExitCode {
     let cli = Cli::parse();
     let color = stream_color(cli.color);
     let mut stderr = AutoStream::new(io::stderr().lock(), color);
