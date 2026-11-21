@@ -84,8 +84,10 @@ stay with Semgrep and the language linters.
 
 Pipeline, per file:
 
-1. Language: from the config's `languages` table, then the file name and
-   extension, then the shebang.
+1. Language: from the config's `languages` table (the first glob written
+   that matches), then the file's whole name, its extension, the name
+   before its first dot (`Dockerfile.dev`; never for a `.lock` file), then
+   the first line's shebang.
 2. Parse: a data format into its document; code into a tree-sitter tree.
 3. Fragments: the injection queries of that language find embedded code;
    each fragment gets a language and a byte range in its host.
@@ -101,8 +103,8 @@ Crates (zizmor's shape: few, small):
 
 | Crate | Holds |
 |---|---|
-| `crates/zoll` | the command: arguments, config discovery, output formats |
-| `crates/zoll_core` | the engine: walking, languages, parsing, fragments, locations, evaluation, lock |
+| `crates/zoll` | the command: arguments, output formats |
+| `crates/zoll_core` | the engine: config discovery, walking, languages, parsing, fragments, locations, evaluation, lock |
 
 Repository data, read at build time:
 
@@ -134,7 +136,13 @@ of its info string.
   zoll is built with, and lists each.
 - An injection Helix's queries miss with zoll's grammar is written by zoll in
   `queries/<language>/zoll.scm`, read after Helix's file: a Dockerfile `RUN`
-  (tree-sitter-containerfile has no `shell_fragment` node).
+  (tree-sitter-containerfile has no `shell_fragment` node), a `just` recipe
+  without a shebang. YAML's file is zoll's alone, and the sync copies none
+  for it: Helix's misses `run:` as a quoted scalar or in a flow mapping, the
+  `commands:` lists and the script after `-c` in an argv list.
+- A later match of the same text replaces an earlier one only when the
+  earlier was a guess and the later names its language (a C++ file's C
+  query loses to its C++ one).
 - An injection that names its language by a capture (a Markdown fence's
   info string) is matched with zoll's names first, then with Helix's
   `injection-regex` of each language, the whole name; `sync` copies those
@@ -252,12 +260,13 @@ then.
   tree; a node the parser inserted for what the text lacks (`MISSING`) is
   left out, as nothing in the file is there to point at;
 - columns count Unicode code points, as everywhere in zoll;
-- a tree nested deeper than 512, or whose text is more than 64 times the
-  file's size (at least 1 MiB is allowed), is refused: the file gets a
-  `zoll.parse` warning. Text on every node would otherwise let a deep file
-  copy itself hundreds of times over. The budget is the file's: its
-  fragments' trees (8.3) spend from it too, and one that overruns it is
-  refused with the same warning.
+- a tree nested deeper than 512, whose text is more than 64 times the
+  file's size (at least 1 MiB is allowed), or past a million nodes, is
+  refused: the file gets a `zoll.parse` warning. Text on every node would
+  otherwise let a deep file copy itself hundreds of times over, and a node
+  takes about 3 KB, so a dense file of `a;` would ask for gigabytes. The
+  budget is the file's: its fragments' trees (8.3) spend from it too, and
+  one that overruns it is refused with the same warning.
 
 ```json
 {"type": "program", "text": "ls | awk '{print $1}'\n",
@@ -293,12 +302,15 @@ own document or tree. A policy about bash runs on `.sh` files, on bash in a
   "host": {
     "path": ".github/workflows/ci.yml",
     "language": "yaml",
-    "at": ["jobs", "build", "steps", 0, "run"]
+    "at": ["jobs", "build", "steps", 0, "run"],
+    "document": 0
   }
 }
 ```
 
-A file has no `host`. A fragment's `host.at` is a path when the host is a
+A file has no `host`. A data host names the `document` the fragment is in,
+counted from 0 as the file's evaluations are: the document of a YAML
+stream, or the item of a root array, whose `at` is then from that item. A fragment's `host.at` is a path when the host is a
 data document and a node when the host is code: its `type`, `text`, `start`
 and `end` as in 8.2, without the nodes under it. A fragment in a fragment
 names the fragment as its host, and that host has its own `host`, down to
@@ -359,7 +371,8 @@ are what suppression, the reports and SARIF's `ruleId` use.
 
 Found as ruff finds its own: `zoll.toml`, `.zoll.toml`, or `[tool.zoll]` in
 `pyproject.toml`, searched from the working directory up. `--config` names
-one. In one directory `.zoll.toml` comes before `zoll.toml`, and both before
+one; its globs and paths are from its own directory, as a found config's
+are, and its `zoll.lock` sits beside it. In one directory `.zoll.toml` comes before `zoll.toml`, and both before
 `pyproject.toml`; a `pyproject.toml` without `[tool.zoll]` is passed over.
 `zoll.toml` and `.zoll.toml` hold the fields at the top level, without the
 `[tool.zoll]` header the example below has.
@@ -367,7 +380,8 @@ one. In one directory `.zoll.toml` comes before `zoll.toml`, and both before
 ```toml
 [tool.zoll]
 include = ["**/*"]
-exclude = ["vendor/**"]            # .gitignore is always honoured
+exclude = ["vendor/**"]            # .gitignore is always honoured; .ignore
+                                   # and one machine's git excludes are not
 
 policies = [
   "policy/",                                                            # a directory
@@ -387,6 +401,10 @@ main = "yaml"
 [tool.zoll.per-file-ignores]
 "scripts/legacy/**" = ["bash.curl_pipe"]
 ```
+
+A path given to `zoll check` is cleaned of `.` and `..` before the globs
+see it, so `zoll check ..` from a subdirectory is the project as `zoll
+check` at its root is.
 
 `policies` is `["policy/"]` when the config names none, as conftest's
 `--policy` default. A data file's document goes at the path of its
@@ -410,7 +428,14 @@ itself.
   works (SSH agent, credential helpers, `gh auth`). Shallow, the one commit,
   into `~/.cache/zoll/policies/<commit>`, the commit's tree without its
   `.git`; a cached commit needs no network. The cache is `$ZOLL_CACHE_DIR`
-  when set, else `zoll/policies` under `$XDG_CACHE_HOME` or `~/.cache`.
+  when set, else `zoll/policies` under `$XDG_CACHE_HOME` or `~/.cache`; a
+  relative `$ZOLL_CACHE_DIR` is refused, a relative `$XDG_CACHE_HOME`
+  passed over. A fetch a killed run left behind is removed after a day.
+- git runs with no terminal to prompt on and none of the `GIT_*` variables
+  that name another repository (a hook's `GIT_DIR`), and is stopped after
+  `$ZOLL_GIT_TIMEOUT` seconds, 600 by default. A password in a source's URL
+  is printed as `***`. A source's directory that is a link out of its
+  commit's tree is refused.
 - `zoll.lock`, beside the config, records per source the commit its ref
   resolved to. Runs use the locked commit, never the ref's current target. It
   is TOML: `version = 1`, and a table `policies` from each source, as the
@@ -489,7 +514,8 @@ config.
   fields zoll emits: one run, the rules that have results in it, each result
   with its `ruleId`, `level` (`error`, `warning`, `note`), message and region;
   `columnKind: "unicodeCodePoints"`, `endColumn` past the last character.
-  The path is relative to the working directory, percent-encoded as a URI.
+  The path is relative to the working directory, percent-encoded as a URI;
+  a file outside it is a `file://` URI of its absolute path.
 
 `path` is the path as the text report shows it: relative to the working
 directory when the file is under it.
@@ -497,13 +523,13 @@ directory when the file is under it.
 ## 13. Risks
 
 - regorus is pre-1.0 with frequent breaking minor releases: the exact
-  version is pinned, and CI runs a corpus of real conftest policies through
-  OPA and zoll and compares.
+  version is pinned. A CI job that runs a corpus of real conftest policies
+  through OPA and zoll and compares comes with CI itself (plan.md, release).
 - regorus lacks some builtins (`rego.metadata.*`, `jwt.*`, some
   `net.cidr_*`, `rego.parse_module`, `strings.render_template`) and rejects
   `not x = v`; a conftest policy using them does not load. Regal, run on
   policies, does not know regorus' gaps; a capabilities file for Regal that
-  removes them is published with zoll.
+  removes them is to be published with the release (plan.md).
 - Editor injection queries are written for highlighting; they mark more
   than zoll needs, and their predicates must be supported or stripped.
 - MPL-2.0 query files stay files of their own under that license.
@@ -523,9 +549,9 @@ discussed with the owner; they are the author's calls, open to correction.
 - **Query sources**: Helix first, since its semantics are the ones zoll
   implements; nvim-treesitter only for a language Helix lacks. One source per
   language, never merged. zoll implements the predicates the kept files use -
-  at least `#eq?`, `#match?`, `#any-of?`, `#not-*` forms, nvim's
-  `#lua-match?` translated to a regex where it can be, and Markdown's
-  info-string language. An injection that needs a predicate zoll cannot
+  at least `#eq?`, `#match?`, `#any-of?`, `#not-*` forms, and Markdown's
+  info-string language. nvim's `#lua-match?` is not: no kept file uses it,
+  and a file taken from nvim-treesitter would bring it with it. An injection that needs a predicate zoll cannot
   evaluate is dropped by the sync script and listed in its output.
 - **A fragment whose language is not installed** is reported as a notice
   (`zoll.unchecked`, printed, never a failure), so a user knows that code was
@@ -535,11 +561,22 @@ discussed with the owner; they are the author's calls, open to correction.
   host's, and a warning on each would be noise. This is data only: code
   always parses, and a fragment's tree zoll refuses (too deep, past the
   file's text budget) is `zoll.parse`, a warning, as a file's is. A file
-  that does not parse stays `zoll.parse` too.
+  that does not parse stays `zoll.parse` too, and so does one that is not
+  UTF-8. A fragment nested more than 8 fragments deep is not looked into,
+  a notice; a file over 16 MiB is not read, a notice too.
+- **Data limits.** YAML and JSON nest at most 128 deep, serde_json's limit
+  (tree-sitter-yaml's scanner aborts the process not far past it); YAML's
+  anchors and aliases may build at most a million nodes and 64 times the
+  file's text.
 - **What is decoded** (stage 5): a YAML block scalar (its header gone, its
   indentation removed, folded and chomped as its indicators say), a YAML
-  plain scalar (its lines folded), a shell string in single quotes (without
-  them). Other content is the node's text, less its children unless the
+  plain or quoted scalar (its lines folded, its escapes resolved), a shell
+  string in single quotes (without them), the string literal a captured
+  piece is part of in Rust, Python, Ruby, bash, Go, JavaScript and
+  TypeScript (whole, escapes resolved, an interpolation as `zoll`), and a
+  `//go:generate` comment as its command. A workflow step's `run` is the
+  language its `shell` (or the job's or workflow's `defaults.run.shell`)
+  names. Other content is the node's text, less its children unless the
   pattern includes them. The matches of an `injection.combined` pattern are
   one fragment, a line break between them unless the host continues the
   line (`\` at its end).

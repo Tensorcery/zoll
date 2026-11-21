@@ -161,6 +161,26 @@ tests, over `file://`, and on conftest's examples fetched from GitHub;
 annotations and in the Security tab. Not run yet: it needs a test
 repository on GitHub, and stage 9's workflow to run zoll in it.
 
+## 8a. Hardening
+
+A roast of stages 1-8 (2026-11-21) proved defects with scripts; each is
+fixed, with a test.
+
+- [x] git: no `GIT_*` of a hook's repository, no prompt, a timeout, no
+      password printed, no link out of a commit, stale fetches swept, no
+      relative cache
+- [x] YAML's injections are zoll's own; quoted and flow `run:`, `commands:`
+      and `-c` argv found; a step's `shell` is its language; string literals
+      decoded whole; `just` recipes; `//go:generate`
+- [x] paths cleaned; `--config` rooted at its directory; only `.gitignore`;
+      `[languages]` in the order written; an extension before the name
+      before the dot; a shebang read to its line end
+- [x] a non-UTF-8 file and a file over 16 MiB are results, not the end of
+      the run; a rule's runtime error names the file; a closed pipe keeps
+      the exit code; SARIF's `file://` URIs
+- [x] limits: YAML and JSON at 128 deep, aliases by text, a million nodes
+      per file's trees, a fragment 8 deep
+
 ## 9. Release
 
 - [ ] a CI workflow runs `make lint` and `make test` on every PR
@@ -169,6 +189,10 @@ repository on GitHub, and stage 9's workflow to run zoll in it.
 - [ ] the release workflow publishes to PyPI by Trusted Publishing
 - [ ] a pre-commit hook definition (`.pre-commit-hooks.yaml`) for users
 - [ ] the README's interface is true: the design status banner goes
+- [ ] CI runs a corpus of real conftest policies through OPA and zoll and
+      compares (design.md, section 13)
+- [ ] a Regal capabilities file without regorus' missing builtins is
+      published (design.md, section 13)
 
 **Checkpoint:** `uv tool install zoll-lint` on a clean machine, then
 `zoll check` in the owner's repository at work.

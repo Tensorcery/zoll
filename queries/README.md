@@ -39,8 +39,12 @@ fence's info string) is matched with, whole.
 
 `<language>/zoll.scm` is zoll's own, read after `injections.scm`, for what
 Helix's queries miss with zoll's grammar: `dockerfile/zoll.scm` finds a
-`RUN`'s shell, since tree-sitter-containerfile has no `shell_fragment`. It is
-MIT, like the rest of the repository; the script never touches it.
+`RUN`'s shell, since tree-sitter-containerfile has no `shell_fragment`;
+`just/zoll.scm` a recipe without a shebang. `yaml/zoll.scm` is YAML's only
+file: the script copies none for a language in its `OWNED` list, since
+Helix's misses `run:` quoted or in a flow mapping, the `commands:` lists and
+the script after `-c` in an argv list. It is MIT, like the rest of the
+repository; the script never touches it.
 
 Each copied file carries the MPL's notice and stays a file of its own; a
 part nvim-treesitter wrote inside a Helix file keeps its attribution. The

@@ -11,8 +11,8 @@ linter sees one language. zoll parses every file - data formats into their
 document, code into its syntax tree - finds the code embedded in it, and
 runs your Rego policies over all of it.
 
-> **Status: design.** The engine is not written yet; what follows is the
-> agreed interface ([docs/design.md](docs/design.md)). Today it runs
+> **Status: works, not released.** What follows is the agreed interface
+> ([docs/design.md](docs/design.md)), built stage by stage. Today it runs
 > Rego policies over YAML, JSON and TOML, as conftest does, over the
 > tree-sitter tree of code, and over the code embedded in either, with
 > results silenced by comment or by glob, policies pinned from git, and
