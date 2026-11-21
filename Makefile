@@ -2,7 +2,7 @@
 # when these pass here.
 
 .DEFAULT_GOAL := help
-.PHONY: help install fmt lint test build queries
+.PHONY: help install fmt lint test build smoke commits queries
 
 UV := env -u VIRTUAL_ENV uv run
 
@@ -22,7 +22,7 @@ install:  ## the tools and the git hooks: once after a clone
 fmt:      ## format the Rust code in place
 	cargo fmt --all
 
-lint:     ## the static checks: the CI lint job
+lint:     ## the static checks: CI's lint job
 	cargo fmt --all --check
 	cargo clippy --locked --all-targets --all-features -- -D warnings
 # A build of fewer languages, as a user may choose one (design.md, section 5).
@@ -52,5 +52,11 @@ test:     ## the tests; a changed snapshot fails until `cargo insta review` take
 queries:  ## Helix's injection queries into queries/, at the commit sync_queries pins
 	cargo run --locked -p zoll_core --example sync_queries
 
-build:    ## the wheel for this platform, into dist/
-	uv build --wheel
+build:    ## the sdist, and the wheel for this platform built from it, into dist/
+	uv build
+
+smoke:    ## the wheel in dist/, installed on its own, finds a violation
+	scripts/smoke.sh
+
+commits:  ## the commit messages of RANGE, judged by cz.toml
+	$(UV) cz check -l 72 --rev-range '$(RANGE)'

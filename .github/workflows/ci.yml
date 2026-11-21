@@ -1,0 +1,108 @@
+# What a change has to pass before it reaches main. Every job runs a make
+# target, so a red run is reproduced on a laptop under the same name.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Nothing by default; a job asks for what it needs.
+permissions: {}
+
+# A newer push to a pull request makes its older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  # On main every commit keeps its run.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+      # rust-toolchain.toml names the toolchain; rustup installs it.
+      - run: rustup toolchain install
+      - uses: taiki-e/install-action@4a76afe23f9e08d2d9550fb56e556444e8611d21  # v2.90.4
+        with:
+          tool: cargo-deny@0.21.0
+      # The grammars are C: built once on main, reused by its pull requests.
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0  # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: uv sync --locked
+      - run: make lint
+        env:
+          # zizmor asks GitHub about the actions the workflows pin.
+          GH_TOKEN: ${{ github.token }}
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each system a wheel is built for: paths, `.exe` and git differ.
+        os: [ubuntu-24.04, macos-15, windows-2025]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0  # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - if: runner.os != 'Windows'
+        run: make test
+      # Windows runners have no make: the command `make test` runs.
+      - if: runner.os == 'Windows'
+        run: cargo test --locked --all-features
+
+  wheel:
+    name: wheel
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0  # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # The wheel built from the sdist, as a user without the repository
+      # gets it: what packaging leaves out fails here, not on PyPI.
+      - run: make build
+      - run: make smoke
+
+  commits:
+    name: commit messages
+    # A local hook can be skipped; this cannot. Dependabot writes its own
+    # messages, with links longer than cz.toml allows.
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # The pull request's own commits, not the merge commit GitHub makes.
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+      - run: uv sync --locked
+      # What the base branch does not have yet, as it stands now.
+      - run: make commits RANGE="origin/$BASE_REF..HEAD"
+        env:
+          BASE_REF: ${{ github.base_ref }}
