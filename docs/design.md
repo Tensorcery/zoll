@@ -580,7 +580,9 @@ discussed with the owner; they are the author's calls, open to correction.
   TypeScript (whole, escapes resolved, an interpolation as `zoll`), and a
   `//go:generate` comment as its command. A workflow step's `run` is the
   language its `shell` (or the job's or workflow's `defaults.run.shell`)
-  names. Other content is the node's text, less its children unless the
+  names, past wrappers such as `env`, `nice`, `sudo` and `timeout` and the
+  flags each takes; past a flag zoll does not know, it stays bash, so
+  bash's policies still see it rather than a guess taking it from them. Other content is the node's text, less its children unless the
   pattern includes them. The matches of an `injection.combined` pattern are
   one fragment, a line break between them unless the host continues the
   line (`\` at its end).
