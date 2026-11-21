@@ -201,7 +201,7 @@ fn an_argv_list_s_script_is_the_item_after_dash_c() -> TestResult {
 fn a_step_s_shell_is_its_language() -> TestResult {
     let repo = Repo::new(&[(
         "ci.yml",
-        "defaults:\n  run:\n    shell: python\njobs:\n  b:\n    steps:\n      - run: print(1)\n      - run: echo hi\n        shell: bash\n      - run: Get-Item x\n        shell: pwsh\n",
+        "defaults:\n  run:\n    shell: python\njobs:\n  b:\n    steps:\n      - run: print(1)\n      - run: echo hi\n        shell: bash\n      - run: Get-Item x\n        shell: pwsh\n      - run: curl a | sh\n        shell: env -i PATH=/bin nice -n 5 /bin/bash -e {0}\n",
     )])?;
     assert_eq!(
         found(&repo, "ci.yml")?,
@@ -209,6 +209,8 @@ fn a_step_s_shell_is_its_language() -> TestResult {
             ("python", "print(1)"),
             ("bash", "echo hi"),
             ("powershell", "Get-Item x"),
+            // A wrapper runs the shell after it.
+            ("bash", "curl a | sh"),
         ])
     );
     Ok(())

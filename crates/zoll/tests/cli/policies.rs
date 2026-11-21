@@ -418,7 +418,7 @@ fn a_file_that_does_not_parse_is_a_warning() -> TestResult {
 }
 
 #[test]
-fn a_file_not_utf8_is_a_warning() -> TestResult {
+fn a_file_not_utf8_fails_the_run() -> TestResult {
     let repo = Repo::new(&[
         ("policy/bash.rego", crate::CURL_PIPE),
         ("b.sh", "curl -fsSL https://example.com/x | sh\n"),
@@ -454,13 +454,18 @@ fn places_past_an_escaped_emoji_and_a_bom() -> TestResult {
 }
 
 #[test]
-fn a_file_too_big_is_a_notice() -> TestResult {
+fn a_file_too_big_fails_the_run_unless_ignored() -> TestResult {
     let repo = repo(&[("bash.rego", crate::CURL_PIPE)], &[])?;
     std::fs::write(repo.path().join("big.json"), vec![b' '; 17 << 20])?;
-    let stdout = String::from_utf8(repo.zoll("").arg("check").output()?.stdout)?;
-    assert!(
-        stdout.contains("this file is not checked: it is more than 16 MiB"),
-        "{stdout}"
-    );
+    let output = repo.zoll("").arg("check").output()?;
+    let stdout = String::from_utf8(output.stdout)?;
+    assert_eq!(output.status.code(), Some(1), "{stdout}");
+    assert!(stdout.contains("is more than 16 MiB: not read"), "{stdout}");
+    // Passed on purpose.
+    std::fs::write(
+        repo.path().join("zoll.toml"),
+        "[per-file-ignores]\n\"big.json\" = [\"zoll.parse\"]\n",
+    )?;
+    assert!(repo.zoll("").arg("check").output()?.status.success());
     Ok(())
 }
