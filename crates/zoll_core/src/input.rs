@@ -351,7 +351,8 @@ fn default_shell(value: Option<&Value>) -> Option<&str> {
 const WRAPPERS: [(&str, &str, &str); 10] = [
     ("command", "", "pvV"),
     ("doas", "Cu", "ns"),
-    ("env", "CPSu", "0iv"),
+    // `-S` is a command line itself: its words are read as the program.
+    ("env", "CPu", "0iSv"),
     ("exec", "a", "cl"),
     ("ionice", "cnpPu", "t"),
     ("nice", "n", ""),
@@ -399,8 +400,10 @@ fn program(shell: &str) -> Option<(String, bool)> {
         if word.contains('=') || word.starts_with(|c: char| c.is_ascii_digit() || c == '{') {
             continue;
         }
+        // Windows runs `Bash.EXE` as bash.
         let name = word.rsplit(['/', '\\']).next().unwrap_or(&word);
-        let name = name.trim_end_matches(".exe");
+        let name = name.to_ascii_lowercase();
+        let name = name.strip_suffix(".exe").unwrap_or(&name);
         match WRAPPERS.iter().find(|(known, _, _)| *known == name) {
             Some((_, value, none)) => wrapper = Some((value, none)),
             None => return Some((name.to_owned(), sure)),
@@ -493,6 +496,9 @@ mod tests {
             // A flag not known: perl may be its value.
             ("sudo -X perl bash {0}", Some(("perl", false))),
             ("env --frob perl bash {0}", Some(("perl", false))),
+            ("env -S bash -e {0}", Some(("bash", true))),
+            ("C:\\Git\\bin\\Bash.EXE {0}", Some(("bash", true))),
+            ("SUDO.exe -u perl bash {0}", Some(("bash", true))),
             ("{0}", None),
         ] {
             let program = program(shell);
