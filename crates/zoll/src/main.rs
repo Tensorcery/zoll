@@ -33,7 +33,8 @@ const STYLES: Styles = Styles::styled()
 /// code, and the code embedded in either - awk in a shell string, shell in a
 /// YAML `run:`.
 #[derive(Parser)]
-#[command(version, styles = STYLES)]
+// `zoll`, not `zoll.exe` on Windows, in the help and the errors.
+#[command(version, bin_name = "zoll", styles = STYLES)]
 struct Cli {
     /// This config instead of the one found from the working directory up.
     #[arg(long, global = true, value_name = "PATH")]
@@ -265,9 +266,15 @@ fn render(error: &Error, cwd: &Path) -> String {
 }
 
 /// A path as the user would type it: relative to the working directory when
-/// it is under it.
+/// it is under it. `/` between its parts on every system, as in the globs of
+/// the config and in GitHub's annotations.
 pub(crate) fn shown(path: &Path, cwd: &Path) -> String {
-    path.strip_prefix(cwd).unwrap_or(path).display().to_string()
+    let shown = path.strip_prefix(cwd).unwrap_or(path).display().to_string();
+    if cfg!(windows) {
+        shown.replace('\\', "/")
+    } else {
+        shown
+    }
 }
 
 fn stream_color(choice: ColorChoice) -> anstream::ColorChoice {

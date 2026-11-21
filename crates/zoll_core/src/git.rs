@@ -429,6 +429,15 @@ fn git(dir: &Path, args: &[&str]) -> Result<String, Error> {
             Ok(Some(status)) => break status,
             Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(20)),
             Ok(None) => {
+                // Git for Windows' `git` starts the real one, which starts
+                // `git-remote-http`: killing the first alone leaves them
+                // running, holding the pipes it inherited.
+                #[cfg(windows)]
+                let _ = Command::new("taskkill")
+                    .args(["/T", "/F", "/PID", &child.id().to_string()])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status();
                 let _ = child.kill();
                 let _ = child.wait();
                 return Err(Error::Other(format!(
