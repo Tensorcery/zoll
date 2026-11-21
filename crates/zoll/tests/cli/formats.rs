@@ -107,15 +107,27 @@ fn a_file_outside_the_directory_is_a_file_uri() -> TestResult {
     let uri = &sarif["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"]
         ["uri"];
     // The path as it was given, not resolved: macOS's /var is a link.
-    // `D:\\x` on Windows is `/D:/x` in a URI.
+    // `D:\x` on Windows is `/D:/x` in a URI. Every other byte RFC 3986
+    // does not leave as it is is percent-encoded: a temporary directory may
+    // hold a space, `#` or a letter beyond ASCII.
     let path = repo.path().join("a b.sh").display().to_string();
-    let path = path.replace('\\', "/").replace(' ', "%20");
+    let path = path.replace('\\', "/");
     let path = if path.starts_with('/') {
         path
     } else {
         format!("/{path}")
     };
-    assert_eq!(uri.as_str(), Some(format!("file://{path}").as_str()));
+    let encoded: String = path
+        .bytes()
+        .map(|byte| {
+            if byte.is_ascii_alphanumeric() || b"-._~/:".contains(&byte) {
+                char::from(byte).to_string()
+            } else {
+                format!("%{byte:02X}")
+            }
+        })
+        .collect();
+    assert_eq!(uri.as_str(), Some(format!("file://{encoded}").as_str()));
     Ok(())
 }
 
