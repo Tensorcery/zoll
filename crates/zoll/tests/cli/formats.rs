@@ -91,3 +91,39 @@ fn nothing_found_is_an_empty_report() -> TestResult {
     }
     Ok(())
 }
+
+#[test]
+fn a_file_outside_the_directory_is_a_file_uri() -> TestResult {
+    let repo = repo()?;
+    // Found from `policy/`, up.
+    std::fs::write(repo.path().join("zoll.toml"), "")?;
+    let output = repo
+        .zoll("")
+        .args(["check", "--format", "sarif"])
+        .arg(repo.path().join("a b.sh"))
+        .current_dir(repo.path().join("policy"))
+        .output()?;
+    let sarif: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    let uri = &sarif["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"]
+        ["uri"];
+    let path = repo.path().canonicalize()?.join("a%20b.sh");
+    assert_eq!(
+        uri.as_str(),
+        Some(format!("file://{}", path.display()).as_str())
+    );
+    Ok(())
+}
+
+#[test]
+fn a_reader_that_stops_keeps_the_exit_code() -> TestResult {
+    let repo = repo()?;
+    let mut child = repo
+        .zoll("")
+        .arg("check")
+        .stdout(std::process::Stdio::piped())
+        .spawn()?;
+    // Gone before zoll writes a byte.
+    drop(child.stdout.take());
+    assert_eq!(child.wait()?.code(), Some(1));
+    Ok(())
+}

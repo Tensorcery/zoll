@@ -10,4 +10,4 @@ exit_code: 2
 ----- stdout -----
 
 ----- stderr -----
-error: `yaml.deny_x` yields an object without a string `msg`, which conftest requires
+error: checking a.yml: `yaml.deny_x` yields an object without a string `msg`, which conftest requires

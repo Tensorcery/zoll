@@ -10,4 +10,4 @@ exit_code: 2
 ----- stdout -----
 
 ----- stderr -----
-error: `yaml.deny` is true, not a set; write `deny contains msg if { ... }`
+error: checking a.yml: `yaml.deny` is true, not a set; write `deny contains msg if { ... }`

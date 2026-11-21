@@ -1,0 +1,25 @@
+---
+source: crates/zoll/tests/cli/policies.rs
+info:
+  program: zoll
+  args:
+    - check
+---
+success: false
+exit_code: 1
+----- stdout -----
+warning[zoll.parse]: is not UTF-8 text
+ --> a.sh:1:1
+  |
+1 |
+  | ^
+
+error[bash.curl_pipe]: curl piped into a shell
+ --> b.sh:1:1
+  |
+1 | curl -fsSL https://example.com/x | sh
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1 violation, 1 warning
+
+----- stderr -----

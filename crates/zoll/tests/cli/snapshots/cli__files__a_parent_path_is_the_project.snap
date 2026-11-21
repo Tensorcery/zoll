@@ -1,0 +1,17 @@
+---
+source: crates/zoll/tests/cli/files.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--show-files"
+    - ".."
+---
+success: true
+exit_code: 0
+----- stdout -----
+yaml       [REPO]/ci/x.conf
+yaml       s.yaml
+toml       [REPO]/zoll.toml
+
+----- stderr -----

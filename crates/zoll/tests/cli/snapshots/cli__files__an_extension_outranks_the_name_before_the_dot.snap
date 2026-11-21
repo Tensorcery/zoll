@@ -1,0 +1,17 @@
+---
+source: crates/zoll/tests/cli/files.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--show-files"
+---
+success: true
+exit_code: 0
+----- stdout -----
+markdown   BUILD.md
+dockerfile Dockerfile.dev
+make       Makefile.release
+json       Pipfile.lock
+
+----- stderr -----

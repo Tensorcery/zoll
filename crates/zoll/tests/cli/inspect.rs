@@ -192,24 +192,74 @@ fn reader_that_stops_reading() -> TestResult {
     Ok(())
 }
 
+/// `zoll inspect` of this YAML fails, saying why.
+fn refused(yaml: &str, why: &str) -> TestResult {
+    let repo = Repo::new(&[("a.yml", yaml)])?;
+    let output = inspect(&repo, "a.yml").output()?;
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(2), "{stderr}");
+    assert!(stderr.contains(why), "{stderr}");
+    Ok(())
+}
+
 #[test]
 fn nested_anchors_count_against_the_limit() -> TestResult {
-    // Each anchor keeps a copy of everything under it: 200 of them over a
-    // list of 6000 copy 1.2 million nodes from a file of 6200. (The parser
-    // refuses nesting much deeper than that by itself.)
-    let depth = 200;
+    // Each anchor keeps a copy of everything under it: 120 of them over a
+    // list of 10 000 copy 1.2 million nodes from a file of 30 000.
+    let depth = 120;
     let mut yaml = String::new();
     for level in 0..depth {
         yaml += "&a";
         yaml += &level.to_string();
         yaml += " [";
     }
-    yaml += &vec!["x"; 6000].join(", ");
+    yaml += &vec!["x"; 10_000].join(", ");
     yaml += &"]".repeat(depth);
-    let repo = Repo::new(&[("a.yml", &yaml)])?;
-    let output = inspect(&repo, "a.yml").output()?;
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert_eq!(output.status.code(), Some(2), "{stderr}");
-    assert!(stderr.contains("more than a million nodes"), "{stderr}");
+    refused(&yaml, "more than a million nodes")
+}
+
+#[test]
+fn a_long_string_aliased_counts_its_text() -> TestResult {
+    // Few nodes, and gigabytes of copies.
+    let yaml = format!(
+        "a: &a \"{}\"\nb: [{}]\n",
+        "x".repeat(100_000),
+        vec!["*a"; 50_000].join(", ")
+    );
+    refused(&yaml, "more than 64 times the file's text")
+}
+
+#[test]
+fn yaml_and_json_nest_as_deep() -> TestResult {
+    let deep = |n| format!("{}{}", "[".repeat(n), "]".repeat(n));
+    let repo = Repo::new(&[
+        ("ok.yml", &deep(120)),
+        ("ok.json", &deep(120)),
+        ("deep.yml", &deep(200)),
+        ("deep.json", &deep(200)),
+    ])?;
+    for file in ["ok.yml", "ok.json"] {
+        assert!(inspect(&repo, file).output()?.status.success(), "{file}");
+    }
+    for file in ["deep.yml", "deep.json"] {
+        let stderr = String::from_utf8(inspect(&repo, file).output()?.stderr)?;
+        assert!(
+            stderr.contains("nested more than 128 deep"),
+            "{file}: {stderr}"
+        );
+    }
     Ok(())
+}
+
+#[test]
+fn a_yaml_mapping_nested_deep_is_refused_not_aborted() -> TestResult {
+    // tree-sitter-yaml's scanner aborts the process near 300 levels.
+    let mut yaml = String::new();
+    for i in 0..300 {
+        yaml += &" ".repeat(i);
+        yaml += "k";
+        yaml += &i.to_string();
+        yaml += ":\n";
+    }
+    refused(&yaml, "nested more than 128 deep")
 }

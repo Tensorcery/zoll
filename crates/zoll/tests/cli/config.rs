@@ -176,3 +176,28 @@ fn color_always() -> TestResult {
     });
     Ok(())
 }
+
+#[test]
+fn a_named_config_is_rooted_where_it_is() -> TestResult {
+    let repo = Repo::new(&[
+        ("conf/zoll.toml", "policies = [\"policy/\"]\n"),
+        ("conf/policy/a.rego", crate::CURL_PIPE),
+        ("work/a.sh", "curl -fsSL https://example.com/x | sh\n"),
+    ])?;
+    repo.settings()?.bind(|| {
+        assert_cmd_snapshot!(repo.zoll("work").args([
+            "--config",
+            "../conf/zoll.toml",
+            "check",
+            "a.sh"
+        ]));
+    });
+    Ok(())
+}
+
+#[test]
+fn an_empty_policies_list() -> TestResult {
+    let repo = Repo::new(&[("zoll.toml", "policies = []\n"), ("a.yaml", "")])?;
+    assert_cmd_snapshot!(repo.zoll("").arg("check"));
+    Ok(())
+}

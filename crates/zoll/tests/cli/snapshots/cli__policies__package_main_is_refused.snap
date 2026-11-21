@@ -10,4 +10,4 @@ exit_code: 2
 ----- stdout -----
 
 ----- stderr -----
-error: policy/main.rego: package main does not name a language; use the language it checks, e.g. `package yaml`, or bind it in the config: `[packages] main = "yaml"`
+error: policy/main.rego: package main does not name a language; use the language it checks, e.g. `package yaml`, or bind it in the config: `[packages] main = "yaml"`, under `[tool.zoll.packages]` in `pyproject.toml`

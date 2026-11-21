@@ -180,3 +180,63 @@ fn path_that_does_not_exist() -> TestResult {
     });
     Ok(())
 }
+
+#[test]
+fn an_extension_outranks_the_name_before_the_dot() -> TestResult {
+    let repo = Repo::new(&[
+        ("BUILD.md", ""),
+        ("Pipfile.lock", "{}"),
+        ("Gemfile.lock", ""),
+        ("Dockerfile.dev", ""),
+        ("Makefile.release", ""),
+    ])?;
+    assert_cmd_snapshot!(show_files(&repo));
+    Ok(())
+}
+
+#[test]
+fn a_shebang_is_read_up_to_its_line_end() -> TestResult {
+    // Byte 128 falls inside a two-byte letter of the second line.
+    let cut = format!("#!/bin/sh\n#  {}\n", "я".repeat(60));
+    let repo = Repo::new(&[("bin/cut", &cut)])?;
+    assert_cmd_snapshot!(show_files(&repo));
+    Ok(())
+}
+
+#[test]
+fn languages_apply_in_the_order_written() -> TestResult {
+    let repo = Repo::new(&[
+        (
+            "zoll.toml",
+            "[languages]\n\"ci/*.conf\" = \"yaml\"\n\"*.conf\" = \"json\"\n",
+        ),
+        ("ci/build.conf", ""),
+        ("other.conf", ""),
+    ])?;
+    assert_cmd_snapshot!(show_files(&repo));
+    Ok(())
+}
+
+#[test]
+fn only_gitignore_hides_files() -> TestResult {
+    let repo = Repo::new(&[(".ignore", "ci/\n"), ("ci/a.sh", "")])?;
+    assert_cmd_snapshot!(show_files(&repo));
+    Ok(())
+}
+
+#[test]
+fn a_parent_path_is_the_project() -> TestResult {
+    let repo = Repo::new(&[
+        (
+            "zoll.toml",
+            "exclude = [\"vendor/**\"]\n[languages]\n\"ci/*.conf\" = \"yaml\"\n",
+        ),
+        ("ci/x.conf", ""),
+        ("sub/s.yaml", ""),
+        ("vendor/v.yaml", ""),
+    ])?;
+    repo.settings()?.bind(|| {
+        assert_cmd_snapshot!(repo.zoll("sub").args(["check", "--show-files", ".."]));
+    });
+    Ok(())
+}

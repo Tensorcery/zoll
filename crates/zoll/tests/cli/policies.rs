@@ -416,3 +416,51 @@ fn a_file_that_does_not_parse_is_a_warning() -> TestResult {
     assert_cmd_snapshot!(repo.zoll("").arg("check"));
     Ok(())
 }
+
+#[test]
+fn a_file_not_utf8_is_a_warning() -> TestResult {
+    let repo = Repo::new(&[
+        ("policy/bash.rego", crate::CURL_PIPE),
+        ("b.sh", "curl -fsSL https://example.com/x | sh\n"),
+    ])?;
+    // `é` in Latin-1.
+    std::fs::write(repo.path().join("a.sh"), b"echo caf\xe9\n")?;
+    assert_cmd_snapshot!(repo.zoll("").arg("check"));
+    Ok(())
+}
+
+#[test]
+fn places_past_an_escaped_emoji_and_a_bom() -> TestResult {
+    let repo = repo(
+        &[
+            (
+                "json.rego",
+                "package json\n\ndeny contains {\"msg\": \"b\", \"at\": [\"b\"]} if input.b\n",
+            ),
+            (
+                "toml.rego",
+                "package toml\n\ndeny contains {\"msg\": \"k\", \"at\": [\"k\"]} if input.k\n",
+            ),
+        ],
+        &[
+            ("a.json", "{\"a\": \"\\ud83d\\ude00\", \"b\": 1}\n"),
+            ("a.toml", "\u{feff}k = 1\n"),
+        ],
+    )?;
+    let stdout = String::from_utf8(repo.zoll("").arg("check").output()?.stdout)?;
+    assert!(stdout.contains("--> a.json:1:23"), "{stdout}");
+    assert!(stdout.contains("--> a.toml:1:2"), "{stdout}");
+    Ok(())
+}
+
+#[test]
+fn a_file_too_big_is_a_notice() -> TestResult {
+    let repo = repo(&[("bash.rego", crate::CURL_PIPE)], &[])?;
+    std::fs::write(repo.path().join("big.json"), vec![b' '; 17 << 20])?;
+    let stdout = String::from_utf8(repo.zoll("").arg("check").output()?.stdout)?;
+    assert!(
+        stdout.contains("this file is not checked: it is more than 16 MiB"),
+        "{stdout}"
+    );
+    Ok(())
+}

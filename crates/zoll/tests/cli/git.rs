@@ -216,3 +216,109 @@ fn local_policies_need_no_lock() -> TestResult {
     assert!(!Path::new(&repo.path().join("zoll.lock")).exists());
     Ok(())
 }
+
+#[test]
+fn a_git_hook_s_repository_is_left_alone() -> TestResult {
+    // A pre-commit hook runs with GIT_DIR and GIT_INDEX_FILE set to the
+    // repository being committed; the fetch must not act on it.
+    let upstream = Upstream::new()?;
+    let repo = project(&upstream.source())?;
+    let victim = Upstream::new()?;
+    let head = |dir: &Path| -> Result<String, Box<dyn Error>> {
+        let out = Command::new("git")
+            .args(["rev-parse", "--symbolic-full-name", "HEAD"])
+            .current_dir(dir)
+            .output()?;
+        Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+    };
+    let before = head(victim.dir.path())?;
+    let git_dir = victim.dir.path().join(".git");
+    let output = repo
+        .zoll("")
+        .arg("check")
+        .env("ZOLL_CACHE_DIR", upstream.cache.path())
+        .env("GIT_DIR", &git_dir)
+        .env("GIT_INDEX_FILE", git_dir.join("index"))
+        .output()?;
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert_eq!(head(victim.dir.path())?, before);
+    Ok(())
+}
+
+#[test]
+fn a_password_in_a_source_is_never_printed() -> TestResult {
+    let upstream = Upstream::new()?;
+    let repo = project("git+http://user:SECRET123@127.0.0.1:1/x.git//bash@v1")?;
+    let output = upstream.zoll(&repo, &["check"])?;
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        !stderr(&output).contains("SECRET123"),
+        "{}",
+        stderr(&output)
+    );
+    assert!(
+        stderr(&output).contains("http://***@127.0.0.1:1"),
+        "{}",
+        stderr(&output)
+    );
+    Ok(())
+}
+
+#[test]
+fn a_server_that_never_answers_times_out() -> TestResult {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+    let port = listener.local_addr()?.port();
+    // Accepted and held, never answered.
+    let held = std::thread::spawn(move || listener.accept().map(|(stream, _)| stream));
+    let upstream = Upstream::new()?;
+    let repo = project(&format!("git+http://127.0.0.1:{port}/x.git//bash@v1"))?;
+    let output = repo
+        .zoll("")
+        .arg("check")
+        .env("ZOLL_CACHE_DIR", upstream.cache.path())
+        .env("ZOLL_GIT_TIMEOUT", "1")
+        .output()?;
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        stderr(&output).contains("did not finish in 1 s"),
+        "{}",
+        stderr(&output)
+    );
+    drop(held);
+    Ok(())
+}
+
+#[test]
+fn a_link_out_of_the_repository_is_refused() -> TestResult {
+    let upstream = Upstream::new()?;
+    let outside = TempDir::new()?;
+    fs::write(outside.path().join("m.rego"), policy("outside"))?;
+    std::os::unix::fs::symlink(outside.path(), upstream.dir.path().join("pol"))?;
+    upstream.git(&["add", "pol"])?;
+    upstream.git(&["commit", "-q", "-m", "link"])?;
+    upstream.git(&["tag", "-f", "-a", "v1", "-m", "v1"])?;
+    let repo = project(&upstream.source().replace("//bash@", "//pol@"))?;
+    let output = upstream.zoll(&repo, &["check"])?;
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        stderr(&output).contains("has no directory `pol` inside it"),
+        "{}",
+        stderr(&output)
+    );
+    Ok(())
+}
+
+#[test]
+fn a_relative_cache_is_refused() -> TestResult {
+    let upstream = Upstream::new()?;
+    let repo = project(&upstream.source())?;
+    let output = repo
+        .zoll("")
+        .arg("check")
+        .env("ZOLL_CACHE_DIR", "cache")
+        .output()?;
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stderr(&output).contains("ZOLL_CACHE_DIR is a relative path"));
+    assert!(!repo.path().join("cache").exists());
+    Ok(())
+}
