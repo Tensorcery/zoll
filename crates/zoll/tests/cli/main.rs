@@ -66,15 +66,43 @@ impl Repo {
         command
     }
 
-    /// Snapshot settings that write the repository's path as `[REPO]`.
+    /// Snapshot settings that write the repository's path as `[REPO]`, in
+    /// each spelling zoll may print it: resolved or as given, with `\` or
+    /// `/` between its parts, and inside a JSON string.
     pub(crate) fn settings(&self) -> Result<insta::Settings, Box<dyn Error>> {
-        let path = self.0.path().canonicalize()?;
+        let given = self.0.path().display().to_string();
+        let resolved = self.0.path().canonicalize()?.display().to_string();
+        // Windows resolves `D:\x` as `\\?\D:\x`.
+        let resolved = resolved
+            .strip_prefix(r"\\?\")
+            .unwrap_or(&resolved)
+            .to_owned();
+        let mut spellings: Vec<String> = Vec::new();
+        for path in [resolved, given] {
+            for spelling in [path.replace('\\', r"\\"), path.replace('\\', "/"), path] {
+                if !spellings.contains(&spelling) {
+                    spellings.push(spelling);
+                }
+            }
+        }
+        // The longest first: one spelling must not leave a part of another.
+        spellings.sort_by_key(|s| std::cmp::Reverse(s.len()));
         let mut settings = insta::Settings::clone_current();
-        settings.add_filter(&escape(&path), "[REPO]");
+        for path in spellings {
+            settings.add_filter(&escape(&path), "[REPO]");
+        }
         Ok(settings)
     }
 }
 
-fn escape(path: &Path) -> String {
-    path.display().to_string().replace('.', r"\.")
+/// A text as a regex that matches it alone.
+fn escape(text: &str) -> String {
+    let mut escaped = String::with_capacity(text.len());
+    for c in text.chars() {
+        if "\\.+*?()|[]{}^$#&-~".contains(c) {
+            escaped.push('\\');
+        }
+        escaped.push(c);
+    }
+    escaped
 }
