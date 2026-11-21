@@ -5,9 +5,6 @@
 .PHONY: help install fmt lint test build queries
 
 UV := env -u VIRTUAL_ENV uv run
-# zizmor's online audits ask GitHub; the token is gh's own, handed to zizmor
-# alone, not to every build script cargo runs.
-GH_TOKEN ?= $(shell gh auth token 2> /dev/null)
 
 # The repository's own: not a roast's or a build's.
 SCRIPTS = $(shell git ls-files '*.sh')
@@ -39,7 +36,11 @@ endif
 ifneq ($(WORKFLOWS),)
 	$(UV) actionlint $(WORKFLOWS)
 endif
-	GH_TOKEN=$(GH_TOKEN) $(UV) zizmor .
+# zizmor's online audits ask GitHub. The token is gh's own, fetched by the
+# shell for zizmor alone - not for every build script cargo runs - and never
+# part of the command make echoes.
+	@echo '$(UV) zizmor .'
+	@GH_TOKEN="$${GH_TOKEN:-$$(gh auth token 2> /dev/null)}" $(UV) zizmor .
 # Not from inside a hook: pre-commit is what is running this.
 ifndef PRE_COMMIT
 	$(UV) pre-commit run --all-files --show-diff-on-failure
