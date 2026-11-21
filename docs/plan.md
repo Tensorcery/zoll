@@ -175,8 +175,9 @@ fixed, with a test.
 - [x] paths cleaned; `--config` rooted at its directory; only `.gitignore`;
       `[languages]` in the order written; an extension before the name
       before the dot; a shebang read to its line end
-- [x] a non-UTF-8 file and a file over 16 MiB are results, not the end of
-      the run; a rule's runtime error names the file; a closed pipe keeps
+- [x] a non-UTF-8 file and a file over 16 MiB are `zoll.parse` errors,
+      not the end of the run; a workflow `shell:` behind `env` or `nice` is
+      still bash; a rule's runtime error names the file; a closed pipe keeps
       the exit code; SARIF's `file://` URIs
 - [x] limits: YAML and JSON at 128 deep, aliases by text, a million nodes
       per file's trees, a fragment 8 deep

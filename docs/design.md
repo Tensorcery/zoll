@@ -561,9 +561,13 @@ discussed with the owner; they are the author's calls, open to correction.
   host's, and a warning on each would be noise. This is data only: code
   always parses, and a fragment's tree zoll refuses (too deep, past the
   file's text budget) is `zoll.parse`, a warning, as a file's is. A file
-  that does not parse stays `zoll.parse` too, and so does one that is not
-  UTF-8. A fragment nested more than 8 fragments deep is not looked into,
-  a notice; a file over 16 MiB is not read, a notice too.
+  that does not parse stays `zoll.parse` too. A fragment nested more than 8
+  fragments deep is not looked into, a notice.
+- **A file zoll cannot read fails the run** (after the roast): one that is
+  not UTF-8, or over 16 MiB, is `zoll.parse` at deny. Code always parses,
+  so a warning would let one byte of Latin-1 take a script out of every
+  policy with the run still green. The other files are still checked;
+  `per-file-ignores` passes such a file on purpose.
 - **Data limits.** YAML and JSON nest at most 128 deep, serde_json's limit
   (tree-sitter-yaml's scanner aborts the process not far past it); YAML's
   anchors and aliases may build at most a million nodes and 64 times the
