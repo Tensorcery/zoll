@@ -42,6 +42,8 @@ language → every violation mapped back to `file:line:col` of the real file
 | `crates/zoll/tests/cli/` | the command run as a user runs it; `snapshots/` is insta's expected output |
 | `crates/zoll/tests/corpus/` | real files, each with the document conftest parses it into (`*.conftest.json`) |
 | `scripts/conftest-corpus.sh` | writes those `*.conftest.json` with conftest |
+| `scripts/smoke.sh` | `make smoke`: the built wheel, installed on its own, finds a violation |
+| `.github/workflows/` | CI (`ci.yml`) and the release (`release-prepare.yml`, `release.yml`); their scripts in `.github/scripts/` |
 | `pyproject.toml` | the PyPI wheel (maturin) and the Python tools of this repository |
 | `docs/design.md` | the decisions, and the public input model (section 8) |
 | `docs/plan.md` | the stages of v1 and their checkpoints; a ticked box is done |
@@ -71,15 +73,29 @@ the one directory of real files. Policies are not part of this repository.
 the git hooks. Without it nothing checks a commit.
 
 `make lint` - rustfmt, clippy with every warning an error (with every
-language, and with none), cargo-deny, yamllint, shellcheck, zizmor,
-pre-commit (jscpd). actionlint runs once there is a workflow, Regal once a
-`.rego` file is tracked; neither has one yet: the policies of the tests are
-Rust strings. It is the pre-push hook, with `make test`.
+language, and with none), cargo-deny, yamllint, shellcheck, actionlint,
+zizmor, pre-commit (jscpd). Regal runs once a `.rego` file is tracked; none
+is yet: the policies of the tests are Rust strings. It is the pre-push hook,
+with `make test`.
 
 `make test` - `cargo test`. A test whose snapshot changed fails; `cargo insta
 review` shows the difference and takes it.
 
-`make build` - the wheel for this platform, in `dist/`.
+`make build` - the sdist and, built from it, the wheel for this platform, in
+`dist/`; `make smoke` installs that wheel on its own and runs it.
+
+CI (`ci.yml`) runs on every PR and on main: `make lint`, `make test` on
+Linux, macOS and Windows, `make build` and `make smoke`, and `make commits`
+over the PR's commits. Each is a check main requires.
+
+## Releases
+
+`prepare release`, started by hand, bumps the version with commitizen on
+`release/v<next>` and opens its PR; its description becomes the release's.
+Merging it is the release: `release.yml` sees a version on main with no
+tag, builds a wheel per platform natively and the sdist, tries each wheel
+where it was built, publishes them to PyPI by Trusted Publishing and
+creates the tag and the GitHub release.
 
 ## Commits
 
