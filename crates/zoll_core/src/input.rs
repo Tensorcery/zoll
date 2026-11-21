@@ -346,6 +346,11 @@ fn default_shell(value: Option<&Value>) -> Option<&str> {
     value?.get("defaults")?.get("run")?.get("shell")?.as_str()
 }
 
+/// Programs that run the command after them, as `shell:` may name them.
+const WRAPPERS: [&str; 10] = [
+    "command", "doas", "env", "exec", "ionice", "nice", "nohup", "stdbuf", "sudo", "timeout",
+];
+
 /// The language a workflow step's `run:` at `path` of `document` is in:
 /// its `shell:`, its job's `defaults.run.shell`, or the workflow's (GitHub
 /// Actions); `None` when none is set or the file is not a workflow.
@@ -366,10 +371,23 @@ fn shell(document: &Value, path: &[Step]) -> Option<Target> {
         .and_then(|step| step.get("shell")?.as_str())
         .or_else(|| default_shell(at(&steps[..steps.len() - 1])))
         .or_else(|| default_shell(Some(document)))?;
-    // `bash -e {0}`, `/usr/bin/python3 {0}`: the program, by its name.
-    let program = shell.split_whitespace().next()?;
-    let program = program.rsplit(['/', '\\']).next()?;
-    let program = program.trim_end_matches(".exe");
+    // `bash -e {0}`, `/usr/bin/python3 {0}`: the program, by its name. A
+    // wrapper (`env`, `nice -n 5`, `timeout 10m`) runs the word after it,
+    // its flags, settings and numbers skipped: `env bash {0}` is bash.
+    let name = |word: &str| -> String {
+        let word = word.rsplit(['/', '\\']).next().unwrap_or(word);
+        word.trim_end_matches(".exe").to_owned()
+    };
+    let program = shell
+        .split_whitespace()
+        .filter(|word| {
+            !word.starts_with(['-', '{'])
+                && !word.contains('=')
+                && !word.starts_with(|c: char| c.is_ascii_digit())
+        })
+        .map(name)
+        .find(|word| !WRAPPERS.contains(&word.as_str()))?;
+    let program = program.as_str();
     match program {
         "bash" | "sh" => None,
         "pwsh" | "powershell" => Some(Target::Zoll("powershell")),

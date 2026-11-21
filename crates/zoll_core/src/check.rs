@@ -51,29 +51,14 @@ fn check_file(
     }
     let size = std::fs::metadata(&file.path).map_or(0, |meta| meta.len());
     if size > MAX_FILE_SIZE {
-        let why = format!(
-            "this file is not checked: it is more than {} MiB",
-            MAX_FILE_SIZE >> 20
-        );
-        let found = vec![note(UNCHECKED, Severity::Notice, Place::of("", 0..0), why)];
-        return Ok(Some(Checked {
-            file,
-            text: String::new(),
-            found,
-        }));
+        let why = format!("is more than {} MiB: not read", MAX_FILE_SIZE >> 20);
+        return Ok(unread(file, why, per_file));
     }
     let text = match input::read(&file) {
         Ok(text) => text,
-        // Latin-1, UTF-16: not text zoll can parse, so a warning, as a file
-        // that does not parse is.
+        // Latin-1, UTF-16: not text zoll can parse.
         Err(Error::Io(_, error)) if error.kind() == std::io::ErrorKind::InvalidData => {
-            let why = "is not UTF-8 text".to_owned();
-            let found = vec![note(PARSE, Severity::Warn, Place::of("", 0..0), why)];
-            return Ok(Some(Checked {
-                file,
-                text: String::new(),
-                found,
-            }));
+            return Ok(unread(file, "is not UTF-8 text".to_owned(), per_file));
         }
         Err(error) => return Err(error),
     };
@@ -142,6 +127,19 @@ fn check_file(
         ))
     });
     Ok(Some(Checked { file, text, found }))
+}
+
+/// A file zoll could not read: a `zoll.parse` error, so a file no policy
+/// saw fails the run rather than passing it unseen. `per-file-ignores`
+/// lets it pass on purpose.
+fn unread(file: File, why: String, per_file: &PerFile) -> Option<Checked> {
+    let mut found = vec![note(PARSE, Severity::Deny, Place::of("", 0..0), why)];
+    suppress::apply(&file, "", &mut found, per_file, false);
+    (!found.is_empty()).then(|| Checked {
+        file,
+        text: String::new(),
+        found,
+    })
 }
 
 /// What zoll itself says of a file it could not read as its language.
