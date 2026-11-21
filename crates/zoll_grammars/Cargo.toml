@@ -11,15 +11,15 @@ publish = false
 include = ["build.rs", "src/", "vendor/"]
 
 [features]
-awk = []
-gotmpl = []
-jq = []
-just = []
-perl = []
-scss = []
+awk = ["dep:tree-sitter-language"]
+gotmpl = ["dep:tree-sitter-language"]
+jq = ["dep:tree-sitter-language"]
+just = ["dep:tree-sitter-language"]
+perl = ["dep:tree-sitter-language"]
+scss = ["dep:tree-sitter-language"]
 
 [dependencies]
-tree-sitter-language.workspace = true
+tree-sitter-language = { workspace = true, optional = true }
 
 [build-dependencies]
 cc.workspace = true
@@ -36,3 +36,8 @@ pedantic = { level = "warn", priority = -1 }
 unwrap_used = "deny"
 expect_used = "deny"
 panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"

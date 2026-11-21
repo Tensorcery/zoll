@@ -14,8 +14,13 @@ use super::Step;
 /// the machine has.
 const MAX_NODES: usize = 1_000_000;
 
-/// Nesting deeper than this is refused rather than overflowing the stack.
-const MAX_DEPTH: usize = 512;
+/// Scalar text one file may build, as a multiple of its own size: a long
+/// string aliased many times is few nodes and much memory.
+const MAX_TEXT_RATIO: usize = 64;
+
+/// Nesting deeper than this is refused, as `serde_json` refuses it in JSON;
+/// tree-sitter-yaml's scanner aborts the process not far past it.
+const MAX_DEPTH: usize = 128;
 
 /// What is wrong, and the character (counted from 0) it is at.
 pub(super) struct YamlError {
@@ -58,6 +63,8 @@ fn build(text: &str, record: bool) -> Result<Vec<(Value, Places)>, YamlError> {
         events: Parser::new_from_str(text).peekable(),
         anchors: HashMap::new(),
         nodes: 0,
+        text: 0,
+        max_text: text.len().saturating_mul(MAX_TEXT_RATIO),
         record,
         path: Vec::new(),
         places: Places::new(),
@@ -76,12 +83,28 @@ fn build(text: &str, record: bool) -> Result<Vec<(Value, Places)>, YamlError> {
     }
 }
 
+/// What a node takes to build.
+#[derive(Clone, Copy)]
+struct Size {
+    nodes: usize,
+    /// Bytes of scalar text.
+    text: usize,
+}
+
+impl Size {
+    const NODE: Self = Self { nodes: 1, text: 0 };
+}
+
 struct Builder<'a> {
     events: Peekable<Parser<'a, StrInput<'a>>>,
-    /// The value of each anchor, and how many nodes it holds.
-    anchors: HashMap<usize, (Value, usize)>,
+    /// The value of each anchor, and how many nodes and bytes of text it
+    /// holds.
+    anchors: HashMap<usize, (Value, Size)>,
     /// Nodes built so far, aliases counted at their full size.
     nodes: usize,
+    /// Bytes of scalar text built so far, aliases counted at their full size.
+    text: usize,
+    max_text: usize,
     /// Whether to keep where each path is, in `places`.
     record: bool,
     /// The path of the node being built.
@@ -111,22 +134,34 @@ impl<'a> Builder<'a> {
         )
     }
 
-    fn count(&mut self, nodes: usize, span: Span) -> Result<(), YamlError> {
-        self.nodes += nodes;
+    fn count(&mut self, size: Size, span: Span) -> Result<(), YamlError> {
+        self.nodes += size.nodes;
+        self.text += size.text;
         if self.nodes > MAX_NODES {
             return Err(error(
                 span,
                 "anchors and aliases make more than a million nodes",
             ));
         }
+        if self.text > self.max_text {
+            return Err(error(
+                span,
+                &format!(
+                    "anchors and aliases make more than {MAX_TEXT_RATIO} times the file's text"
+                ),
+            ));
+        }
         Ok(())
     }
 
     fn node(&mut self, depth: usize) -> Result<Value, YamlError> {
-        let start = self.nodes;
+        let start = Size {
+            nodes: self.nodes,
+            text: self.text,
+        };
         let (event, span) = self.next()?;
         if depth > MAX_DEPTH {
-            return Err(error(span, "nested more than 512 deep"));
+            return Err(error(span, &format!("nested more than {MAX_DEPTH} deep")));
         }
         if self.record {
             self.places.entry(self.path.clone()).or_insert(span);
@@ -140,11 +175,15 @@ impl<'a> Builder<'a> {
                 return Ok(value);
             }
             Event::Scalar(text, style, anchor, tag) => {
-                self.count(1, span)?;
+                let size = Size {
+                    nodes: 1,
+                    text: text.len(),
+                };
+                self.count(size, span)?;
                 (scalar(&text, style, tag.as_deref(), span)?, anchor)
             }
             Event::SequenceStart(anchor, _) => {
-                self.count(1, span)?;
+                self.count(Size::NODE, span)?;
                 let mut items = Vec::new();
                 while !self.peek_ends() {
                     self.path.push(Step::Index(items.len()));
@@ -156,7 +195,7 @@ impl<'a> Builder<'a> {
                 (Value::Array(items), anchor)
             }
             Event::MappingStart(anchor, _) => {
-                self.count(1, span)?;
+                self.count(Size::NODE, span)?;
                 (Value::Object(self.mapping(depth)?), anchor)
             }
             _ => return Err(error(span, "a node was expected here")),
@@ -164,7 +203,10 @@ impl<'a> Builder<'a> {
         if anchor != 0 {
             // The anchor keeps a copy: nested anchors copy what is under
             // them again at every level, so the copy counts too.
-            let size = self.nodes - start;
+            let size = Size {
+                nodes: self.nodes - start.nodes,
+                text: self.text - start.text,
+            };
             self.count(size, span)?;
             self.anchors.insert(anchor, (value.clone(), size));
         }

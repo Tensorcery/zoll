@@ -69,7 +69,7 @@ anstream.workspace = true
 anstyle.workspace = true
 clap.workspace = true
 serde_json.workspace = true
-zoll_core = { path = "../zoll_core", default-features = false }
+zoll_core.workspace = true
 
 [lints]
 workspace = true

@@ -14,31 +14,8 @@ use crate::policy::{At, Policies, Severity, Violation};
 use crate::suppress::{self, PerFile};
 use crate::walk::File;
 
-/// A file with what was found in it.
-#[derive(Debug)]
-pub struct Checked {
-    /// The file.
-    pub file: File,
-    /// Its text, for the report to show the lines.
-    pub text: String,
-    /// What was found, in the order of the file.
-    pub found: Vec<Found>,
-}
-
-/// A violation, and where it is.
-#[derive(Debug)]
-pub struct Found {
-    /// What the rule found.
-    pub violation: Violation,
-    /// Where in the file.
-    pub place: Place,
-    /// The fragments it was found through, the outermost first: each
-    /// `{"language", "at"}`, `at` where it sits in its host (section 8.3).
-    /// Empty for a result on the file itself.
-    pub fragments: Vec<Value>,
-}
-
 pub use crate::input::{PARSE, UNCHECKED};
+pub use crate::policy::{Checked, Found};
 
 /// Every file checked, less what `per_file` and the files' comments
 /// silence; those with nothing found are left out.
@@ -60,6 +37,9 @@ pub fn check(
     Ok(checked)
 }
 
+/// A bigger file is not read: its trees would take gigabytes.
+const MAX_FILE_SIZE: u64 = 16 << 20;
+
 fn check_file(
     file: File,
     policies: &Policies,
@@ -69,7 +49,34 @@ fn check_file(
         // A language this zoll was built without: nothing to check it with.
         return Ok(None);
     }
-    let text = input::read(&file)?;
+    let size = std::fs::metadata(&file.path).map_or(0, |meta| meta.len());
+    if size > MAX_FILE_SIZE {
+        let why = format!(
+            "this file is not checked: it is more than {} MiB",
+            MAX_FILE_SIZE >> 20
+        );
+        let found = vec![note(UNCHECKED, Severity::Notice, Place::of("", 0..0), why)];
+        return Ok(Some(Checked {
+            file,
+            text: String::new(),
+            found,
+        }));
+    }
+    let text = match input::read(&file) {
+        Ok(text) => text,
+        // Latin-1, UTF-16: not text zoll can parse, so a warning, as a file
+        // that does not parse is.
+        Err(Error::Io(_, error)) if error.kind() == std::io::ErrorKind::InvalidData => {
+            let why = "is not UTF-8 text".to_owned();
+            let found = vec![note(PARSE, Severity::Warn, Place::of("", 0..0), why)];
+            return Ok(Some(Checked {
+                file,
+                text: String::new(),
+                found,
+            }));
+        }
+        Err(error) => return Err(error),
+    };
     let mut found = Vec::new();
     let evaluations = input::evaluations(&file, &text);
     let evaluated = evaluations.is_ok();
@@ -77,7 +84,17 @@ fn check_file(
         Ok((evaluations, notes)) => {
             for evaluation in &evaluations {
                 let source = &evaluation.source;
-                for violation in policies.check(source.language, evaluation)? {
+                // A rule that fails on one file: the file is named, for the
+                // user to see what it failed on.
+                let violations = policies
+                    .check(source.language, evaluation)
+                    .map_err(|error| match error {
+                        Error::Other(message) => {
+                            Error::Other(format!("checking {}: {message}", file.relative))
+                        }
+                        error => error,
+                    })?;
+                for violation in violations {
                     let span = local_span(&violation, evaluation);
                     let place = Place::of(&text, source.map.span(span));
                     let fragments = chain(&evaluation.data["zoll"]["file"]);
@@ -105,18 +122,12 @@ fn check_file(
         }
         // A data file that does not parse - a Helm template, `${{ }}` that
         // breaks the YAML - is a warning, not the end of the run.
-        Err(Error::Source(error)) => found.push(Found {
-            place: Place::of(&text, error.span.unwrap_or(0..0)),
-            fragments: Vec::new(),
-            violation: Violation {
-                rule: PARSE.to_owned(),
-                severity: Severity::Warn,
-                message: format!("does not parse as {}: {}", file.language, error.message),
-                at: None,
-                line: None,
-                metadata: serde_json::Map::new(),
-            },
-        }),
+        Err(Error::Source(error)) => found.push(note(
+            PARSE,
+            Severity::Warn,
+            Place::of(&text, error.span.unwrap_or(0..0)),
+            format!("does not parse as {}: {}", file.language, error.message),
+        )),
         Err(error) => return Err(error),
     }
     suppress::apply(&file, &text, &mut found, per_file, evaluated);
@@ -131,6 +142,22 @@ fn check_file(
         ))
     });
     Ok(Some(Checked { file, text, found }))
+}
+
+/// What zoll itself says of a file it could not read as its language.
+fn note(rule: &str, severity: Severity, place: Place, message: String) -> Found {
+    Found {
+        place,
+        fragments: Vec::new(),
+        violation: Violation {
+            rule: rule.to_owned(),
+            severity,
+            message,
+            at: None,
+            line: None,
+            metadata: serde_json::Map::new(),
+        },
+    }
 }
 
 /// The fragments `data.zoll.file` was reached through, the outermost
@@ -151,16 +178,20 @@ fn local_span(violation: &Violation, evaluation: &Evaluation) -> Range<usize> {
     let source = &evaluation.source;
     let text = source.text.as_str();
     match (&violation.at, violation.line) {
-        (Some(At::Path(path)), _) => {
-            document::locate(source.language, text, evaluation.origin, path).span
-        }
+        (Some(At::Path(path)), _) => index(source).locate(text, evaluation.origin, path).span,
         (Some(At::Node { start, end }), _) => {
             let byte = |(line, column)| line_column_span(text, line, column).start;
             byte(*start)..byte(*end)
         }
         (None, Some(line)) => line_start(text, line),
-        (None, None) => document::locate(source.language, text, evaluation.origin, &[]).span,
+        (None, None) => index(source).locate(text, evaluation.origin, &[]).span,
     }
+}
+
+fn index(source: &input::Source) -> &document::Index {
+    source
+        .index
+        .get_or_init(|| document::Index::new(source.language, &source.text))
 }
 
 /// The start of a line, from 1; the end of the text past its last line.

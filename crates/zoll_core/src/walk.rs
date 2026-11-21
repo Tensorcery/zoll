@@ -1,7 +1,7 @@
 //! The files a run checks: walked in parallel, `.gitignore` honoured, the
 //! config's `include` and `exclude` applied.
 
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::Mutex;
 
 use globset::{GlobSet, GlobSetBuilder};
@@ -57,6 +57,11 @@ pub fn files(
         // `.gitignore` is honoured in a directory that is not a repository
         // yet, too.
         .require_git(false)
+        // Only what the repository commits: not `.ignore`, nor what one
+        // machine's git excludes, so a run here and in CI see the same files.
+        .ignore(false)
+        .git_global(false)
+        .git_exclude(false)
         .filter_entry(|entry| !VCS.iter().any(|vcs| entry.file_name() == *vcs));
 
     let found = Mutex::new(Vec::new());
@@ -105,6 +110,31 @@ pub fn files(
     Ok(found)
 }
 
+/// The path without `.` and `..` parts, as the user meant it: `sub/..` is
+/// the directory `sub` is in. Not resolved through links, as a shell's `cd`
+/// is not.
+#[must_use]
+pub fn clean(path: &Path) -> PathBuf {
+    let mut clean = PathBuf::new();
+    for part in path.components() {
+        match part {
+            Component::CurDir => {}
+            Component::ParentDir
+                if matches!(clean.components().next_back(), Some(Component::Normal(_))) =>
+            {
+                clean.pop();
+            }
+            // `/..` is `/`.
+            Component::ParentDir if clean.has_root() => {}
+            part => clean.push(part),
+        }
+    }
+    if clean.as_os_str().is_empty() {
+        clean.push(".");
+    }
+    clean
+}
+
 /// The path from `root`, `/` between the parts; the path itself when it is
 /// not under `root`.
 #[must_use]
@@ -127,4 +157,22 @@ fn globs(globs: &[String]) -> Result<GlobSet, Error> {
         set.add(glob_of(glob)?);
     }
     set.build().map_err(|e| Error::Other(e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_path_is_cleaned_of_dots() {
+        for (path, clean_path) in [
+            ("/repo/sub/..", "/repo"),
+            ("/repo/./a/../b", "/repo/b"),
+            ("/..", "/"),
+            ("../a", "../a"),
+            ("a/..", "."),
+        ] {
+            assert_eq!(clean(Path::new(path)), Path::new(clean_path), "{path}");
+        }
+    }
 }

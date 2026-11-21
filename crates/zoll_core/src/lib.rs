@@ -5,8 +5,9 @@
 pub mod check;
 pub mod code;
 pub mod config;
+mod decode;
 pub mod document;
-pub mod error;
+mod error;
 pub mod git;
 pub mod injection;
 pub mod input;

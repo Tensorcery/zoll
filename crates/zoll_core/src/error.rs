@@ -51,7 +51,11 @@ pub(crate) fn line_column_span(text: &str, line: usize, column: usize) -> Range<
         .take(line.saturating_sub(1))
         .map(str::len)
         .sum();
+    // A column past the line's end is its end, not a place on the next.
     let index = text[line_start.min(text.len())..]
+        .split('\n')
+        .next()
+        .unwrap_or_default()
         .chars()
         .take(column.saturating_sub(1))
         .map(char::len_utf8)
@@ -76,3 +80,15 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_column_past_the_line_end_is_its_end() {
+        assert_eq!(line_column_span("ab\ncd\n", 1, 500), 2..3);
+        assert_eq!(line_column_span("ab\ncd", 2, 500), 5..5);
+        assert_eq!(line_column_span("ab\ncd", 2, 2), 4..5);
+    }
+}

@@ -1,7 +1,6 @@
 //! The language of a file: the config's `languages` table, then the file's
 //! name and extension, then its shebang (docs/design.md, section 5).
 
-use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -73,7 +72,7 @@ pub fn compiled(language: &str) -> bool {
 }
 
 /// File names that tell their language whole.
-const NAMES: [(&str, &str); 20] = [
+const NAMES: [(&str, &str); 21] = [
     ("Containerfile", "dockerfile"),
     ("Dockerfile", "dockerfile"),
     ("GNUmakefile", "make"),
@@ -83,6 +82,7 @@ const NAMES: [(&str, &str); 20] = [
     ("Rakefile", "ruby"),
     ("makefile", "make"),
     ("Pipfile", "toml"),
+    ("Pipfile.lock", "json"),
     ("go.mod", "go"),
     (".bashrc", "bash"),
     ("BUILD", "starlark"),
@@ -222,7 +222,7 @@ impl Languages {
     /// # Errors
     ///
     /// A glob that does not compile, or a language not in [`LANGUAGES`].
-    pub fn new(table: &BTreeMap<String, String>) -> Result<Self, Error> {
+    pub fn new(table: &[(String, String)]) -> Result<Self, Error> {
         let table = table
             .iter()
             .map(|(glob, language)| {
@@ -274,16 +274,22 @@ pub(crate) fn from_name(path: &Path) -> Option<&'static str> {
     if let Some((_, language)) = NAMES.iter().find(|(known, _)| *known == name) {
         return Some(language);
     }
-    // `Dockerfile.dev`, `Makefile.release`: the name before the dot.
-    if let Some((stem, _)) = name.split_once('.')
-        && let Some((_, language)) = NAMES.iter().find(|(known, _)| *known == stem)
+    let extension = path.extension().and_then(|e| e.to_str());
+    if let Some((_, language)) = EXTENSIONS
+        .iter()
+        .find(|(known, _)| Some(*known) == extension)
     {
         return Some(language);
     }
-    let extension = path.extension()?.to_str()?;
-    EXTENSIONS
+    // `Dockerfile.dev`, `Makefile.release`: the name before the dot, when
+    // the extension names no language. A `Gemfile.lock` is no Ruby.
+    let (stem, _) = name.split_once('.')?;
+    if extension == Some("lock") {
+        return None;
+    }
+    NAMES
         .iter()
-        .find(|(known, _)| *known == extension)
+        .find(|(known, _)| *known == stem)
         .map(|(_, language)| *language)
 }
 
@@ -292,7 +298,9 @@ pub(crate) fn from_name(path: &Path) -> Option<&'static str> {
 fn from_shebang(path: &Path) -> Option<&'static str> {
     let mut head = [0; 128];
     let read = File::open(path).ok()?.read(&mut head).ok()?;
-    of_shebang(std::str::from_utf8(&head[..read]).ok()?.lines().next()?)
+    // Only the first line is read: what follows it may be cut mid-character.
+    let line = head[..read].split(|&byte| byte == b'\n').next()?;
+    of_shebang(std::str::from_utf8(line).ok()?)
 }
 
 /// The language of a `#!` line.

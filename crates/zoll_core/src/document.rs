@@ -3,12 +3,13 @@
 
 mod yaml;
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::Range;
 use std::path::Path;
 
 use serde_json::{Map, Number, Value};
-use toml::de::{DeArray, DeTable, DeValue};
+use toml::de::{DeTable, DeValue};
 
 use crate::error::{Error, SourceError, char_span};
 
@@ -118,20 +119,26 @@ pub fn documents(language: &str, path: &Path, text: &str) -> Result<Option<Vec<D
         }
         "json" => {
             // A byte order mark is skipped, as conftest skips it.
-            let json = text.strip_prefix('\u{feff}').unwrap_or(text);
+            let (json, offset) = without_bom(text);
             let document = serde_json::from_str(json).map_err(|e| {
-                let offset = text.len() - json.len();
                 // The place is drawn under the message; it need not say it too.
                 let message = e.to_string();
-                let message = message.split(" at line ").next().unwrap_or(&message);
+                let message = match message.split(" at line ").next().unwrap_or(&message) {
+                    // In the words YAML's limit has.
+                    "recursion limit exceeded" => "nested more than 128 deep",
+                    message => message,
+                };
                 let span = at_line(json, e.line(), e.column(), offset);
                 failed(message.to_owned(), Some(span))
             })?;
             vec![document]
         }
         "toml" => {
-            let table: toml::Table =
-                toml::from_str(text).map_err(|e| failed(e.message().to_owned(), e.span()))?;
+            let (body, offset) = without_bom(text);
+            let table: toml::Table = toml::from_str(body).map_err(|e| {
+                let span = e.span().map(|span| span.start + offset..span.end + offset);
+                failed(e.message().to_owned(), span)
+            })?;
             vec![from_toml(toml::Value::Table(table)).map_err(|e| failed(e, None))?]
         }
         _ => return Ok(None),
@@ -176,82 +183,168 @@ pub fn documents(language: &str, path: &Path, text: &str) -> Result<Option<Vec<D
     ))
 }
 
-/// Where `path` is in a document of a data file: its key, or its item; the
-/// nearest of its parents that is in the file when it is not; the start of
-/// the document for the empty path.
-#[must_use]
-pub fn locate(language: &str, text: &str, origin: Origin, path: &[Step]) -> Place {
-    let mut full: Vec<Step> = origin.item.map(Step::Index).into_iter().collect();
-    full.extend_from_slice(path);
-    let found = match language {
-        // JSON is YAML too, so its places come from the same parser.
-        "yaml" | "json" => locate_yaml(text, origin.document, &full),
-        "toml" => DeTable::parse(text)
-            .ok()
-            .map(|table| locate_toml(table.get_ref(), &full)),
-        _ => None,
-    };
-    Place::of(
-        text,
-        found.unwrap_or(0..text.chars().next().map_or(0, char::len_utf8)),
-    )
+/// Where the paths of a data file's documents are, found once for all the
+/// results in it: parsing the file again for each one would grow with the
+/// square of its results.
+#[derive(Debug, Default)]
+pub struct Index {
+    /// The place of each path, by document.
+    documents: Vec<HashMap<Vec<Step>, Range<usize>>>,
 }
 
-/// The path of each place of a YAML stream, by the byte it starts at: the
-/// key of a mapping entry, the node of a sequence item. Where two start at
-/// one byte (an item and its first key), the longer path is kept.
+impl Index {
+    /// The places of `text`, a file of `language`; none for code.
+    #[must_use]
+    pub fn new(language: &str, text: &str) -> Self {
+        let documents = match language {
+            // JSON is YAML too, so its places come from the same parser.
+            "yaml" | "json" => yaml::places(&surrogates_replaced(language, text))
+                .unwrap_or_default()
+                .into_iter()
+                .map(|places| {
+                    places
+                        .into_iter()
+                        .map(|(path, span)| {
+                            let start = char_span(text, span.start.index()).start;
+                            let end = char_span(text, span.end.index()).start;
+                            (path, start..end)
+                        })
+                        .collect()
+                })
+                .collect(),
+            "toml" => {
+                let (body, offset) = without_bom(text);
+                DeTable::parse(body).ok().map_or_else(Vec::new, |table| {
+                    let mut places = HashMap::new();
+                    toml_places(table.get_ref(), &mut Vec::new(), &mut places);
+                    for span in places.values_mut() {
+                        *span = span.start + offset..span.end + offset;
+                    }
+                    vec![places]
+                })
+            }
+            _ => Vec::new(),
+        };
+        Self { documents }
+    }
+
+    /// Where `path` is in a document of `text`: its key, or its item; the
+    /// nearest of its parents that is in the file when it is not; the start
+    /// of the document for the empty path.
+    #[must_use]
+    pub fn locate(&self, text: &str, origin: Origin, path: &[Step]) -> Place {
+        let mut full: Vec<Step> = origin.item.map(Step::Index).into_iter().collect();
+        full.extend_from_slice(path);
+        let found = self.documents.get(origin.document).and_then(|places| {
+            (0..=full.len())
+                .rev()
+                .find_map(|n| places.get(&full[..n]).cloned())
+        });
+        Place::of(
+            text,
+            found.unwrap_or(0..text.chars().next().map_or(0, char::len_utf8)),
+        )
+    }
+}
+
+/// The text after its byte order mark, if it has one, and the mark's length:
+/// the parsers' places are in the text without it.
+fn without_bom(text: &str) -> (&str, usize) {
+    let body = text.strip_prefix('\u{feff}').unwrap_or(text);
+    (body, text.len() - body.len())
+}
+
+/// JSON's `\ud83d\ude00`, which the YAML parser refuses, as `\ufffd\ufffd`:
+/// as long, so every place stays where it is. A key spelled with one is
+/// placed at its parent.
+fn surrogates_replaced<'t>(language: &str, text: &'t str) -> Cow<'t, str> {
+    if language != "json" || !text.contains("\\u") {
+        return Cow::Borrowed(text);
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find('\\') {
+        out.push_str(&rest[..at]);
+        rest = &rest[at..];
+        let surrogate = rest[1..].starts_with('u')
+            && rest
+                .get(2..6)
+                .and_then(|hex| u16::from_str_radix(hex, 16).ok())
+                .is_some_and(|unit| (0xD800..0xE000).contains(&unit));
+        // The backslash and what it escapes: `\\` is not the start of `\u`.
+        let taken = if surrogate {
+            6
+        } else {
+            1 + rest[1..].chars().next().map_or(0, char::len_utf8)
+        };
+        out.push_str(if surrogate { "\\ufffd" } else { &rest[..taken] });
+        rest = &rest[taken..];
+    }
+    out.push_str(rest);
+    Cow::Owned(out)
+}
+
+/// The place of every path of a TOML table: a key for a table's entry, the
+/// value for an array's item.
+fn toml_places(
+    value: &DeTable<'_>,
+    path: &mut Vec<Step>,
+    places: &mut HashMap<Vec<Step>, Range<usize>>,
+) {
+    if path.is_empty() {
+        places.insert(Vec::new(), 0..0);
+    }
+    for (key, value) in value {
+        path.push(Step::Key(key.get_ref().to_string()));
+        places.insert(path.clone(), key.span());
+        toml_value(value.get_ref(), path, places);
+        path.pop();
+    }
+}
+
+fn toml_value(
+    value: &DeValue<'_>,
+    path: &mut Vec<Step>,
+    places: &mut HashMap<Vec<Step>, Range<usize>>,
+) {
+    match value {
+        DeValue::Table(table) => toml_places(table, path, places),
+        DeValue::Array(array) => {
+            for (i, item) in array.iter().enumerate() {
+                path.push(Step::Index(i));
+                places.insert(path.clone(), item.span());
+                toml_value(item.get_ref(), path, places);
+                path.pop();
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The document and the path of each place of a YAML stream, by the byte
+/// it starts at: the key of a mapping entry, the node of a sequence item.
+/// Where two start at one byte (an item and its first key), the longer path
+/// is kept.
 #[must_use]
-pub fn yaml_paths(text: &str) -> HashMap<usize, Vec<Step>> {
+pub fn yaml_paths(text: &str) -> HashMap<usize, (usize, Vec<Step>)> {
     let bytes: Vec<usize> = text.char_indices().map(|(i, _)| i).collect();
-    let mut paths: HashMap<usize, Vec<Step>> = HashMap::new();
-    for places in yaml::places(text).unwrap_or_default() {
+    let mut paths: HashMap<usize, (usize, Vec<Step>)> = HashMap::new();
+    for (document, places) in yaml::places(text)
+        .unwrap_or_default()
+        .into_iter()
+        .enumerate()
+    {
         for (path, span) in places {
             let byte = bytes.get(span.start.index()).copied().unwrap_or(text.len());
             let longer = paths
                 .get(&byte)
-                .is_none_or(|known| known.len() < path.len());
+                .is_none_or(|(_, known)| known.len() < path.len());
             if longer {
-                paths.insert(byte, path);
+                paths.insert(byte, (document, path));
             }
         }
     }
     paths
-}
-
-fn locate_yaml(text: &str, document: usize, path: &[Step]) -> Option<Range<usize>> {
-    let places = yaml::places(text).ok()?;
-    let places = places.get(document)?;
-    let span = (0..=path.len())
-        .rev()
-        .find_map(|n| places.get(&path[..n]))?;
-    let start = char_span(text, span.start.index()).start;
-    let end = char_span(text, span.end.index()).start;
-    Some(start..end)
-}
-
-/// The span of the deepest step of `path` in a TOML table: a key for a
-/// table's entry, the value for an array's item.
-fn locate_toml(table: &DeTable<'_>, path: &[Step]) -> Range<usize> {
-    let mut span = 0..0;
-    let (mut table, mut array) = (Some(table), None);
-    for step in path {
-        let found = match step {
-            Step::Key(key) => table
-                .and_then(|t| t.iter().find(|(k, _)| k.get_ref() == key))
-                .map(|(k, v)| (k.span(), v)),
-            Step::Index(i) => array
-                .and_then(|a: &DeArray<'_>| a.get(*i))
-                .map(|v| (v.span(), v)),
-        };
-        let Some((found, value)) = found else { break };
-        span = found;
-        (table, array) = match value.get_ref() {
-            DeValue::Table(t) => (Some(t), None),
-            DeValue::Array(a) => (None, Some(a)),
-            _ => (None, None),
-        };
-    }
-    span
 }
 
 /// The byte range of the character at `line` and `column` (both from 1, the

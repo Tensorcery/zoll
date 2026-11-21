@@ -24,6 +24,11 @@ const HELIX: &str = "9de242bfac2aac9dfd0e4496eb25190e85c24e69";
 /// Directives that only move an editor's highlight, stripped from a pattern.
 const EDITOR_ONLY: [&str; 1] = ["offset!"];
 
+/// Languages whose injections zoll writes in full in `zoll.scm`: Helix's
+/// miss what a policy must see (YAML's quoted and flow-style `run:`, a
+/// `command:` list's `-c` script), and a Helix rule would add wrong ones.
+const OWNED: [&str; 1] = ["yaml"];
+
 type Result<T> = std::result::Result<T, String>;
 
 fn main() -> std::process::ExitCode {
@@ -52,7 +57,7 @@ fn run() -> Result<()> {
             .join("runtime/queries")
             .join(name)
             .join("injections.scm");
-        if !source.exists() {
+        if !source.exists() || OWNED.contains(&language) {
             remove(&file)?;
             continue;
         }
@@ -100,6 +105,11 @@ fn checkout(cache: &Path) -> Result<PathBuf> {
     let dir = cache.join(format!("helix-{HELIX}"));
     if dir.join("languages.toml").exists() {
         return Ok(dir);
+    }
+    // What a run stopped mid-fetch left: started over, or `git remote add`
+    // fails on it every time after.
+    if dir.exists() {
+        std::fs::remove_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     }
     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let git = |args: &[&str]| -> Result<()> {

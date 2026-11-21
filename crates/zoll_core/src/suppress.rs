@@ -12,11 +12,10 @@ use globset::GlobMatcher;
 use regex::Regex;
 use toml::Spanned;
 
-use crate::check::{Checked, Found};
 use crate::document::Place;
 use crate::error::Error;
 use crate::language::glob_of;
-use crate::policy::{Severity, Violation};
+use crate::policy::{Checked, Found, Severity, Violation};
 use crate::walk::{self, File};
 
 /// The rule id of a suppression that silenced nothing.

@@ -9,23 +9,13 @@ use regorus::unstable::{Rule, RuleHead};
 use serde_json::{Map, Value};
 
 use crate::config::{Config, RegoVersion};
-use crate::document::{self, Step};
+use crate::document::{self, Place, Step};
 use crate::error::{Error, SourceError, line_column_span};
 use crate::input::Evaluation;
 use crate::language::LANGUAGES;
-use crate::walk::relative;
+use crate::walk::{File, relative};
 
-/// How much a result weighs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Severity {
-    /// zoll's own word on what it could not check: shown, never fails the
-    /// run.
-    Notice,
-    /// A `warn` rule's: shown, and fails the run only with `fail-on = "warn"`.
-    Warn,
-    /// A `deny` or `violation` rule's: fails the run.
-    Deny,
-}
+pub use crate::input::Severity;
 
 /// What a rule found, before it is placed in the file.
 #[derive(Debug, Clone)]
@@ -57,6 +47,30 @@ pub enum At {
         /// Where it ends, past its last character.
         end: (usize, usize),
     },
+}
+
+/// A file with what was found in it.
+#[derive(Debug)]
+pub struct Checked {
+    /// The file.
+    pub file: File,
+    /// Its text, for the report to show the lines.
+    pub text: String,
+    /// What was found, in the order of the file.
+    pub found: Vec<Found>,
+}
+
+/// A violation, and where it is.
+#[derive(Debug)]
+pub struct Found {
+    /// What the rule found.
+    pub violation: Violation,
+    /// Where in the file.
+    pub place: Place,
+    /// The fragments it was found through, the outermost first: each
+    /// `{"language", "at"}`, `at` where it sits in its host (section 8.3).
+    /// Empty for a result on the file itself.
+    pub fragments: Vec<Value>,
 }
 
 impl At {
@@ -129,6 +143,12 @@ impl Policies {
                     .map_err(|e| rego_error(&e.to_string(), path.clone(), text))?;
                 loaded += 1;
             }
+        }
+        if config.policies.is_empty() {
+            return Err(Error::Other(
+                "the config's `policies` is empty; name a directory of policies, or a git source"
+                    .to_owned(),
+            ));
         }
         if loaded == 0 {
             return Err(Error::Other(format!(
@@ -343,7 +363,8 @@ fn packages(
                 return Err(Error::Other(format!(
                     "{file}: package main does not name a language; use the language it \
                      checks, e.g. `package yaml`, or bind it in the config: \
-                     `[packages] main = \"yaml\"`"
+                     `[packages] main = \"yaml\"`, under `[tool.zoll.packages]` in \
+                     `pyproject.toml`"
                 )));
             }
             continue;

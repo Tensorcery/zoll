@@ -37,6 +37,9 @@ Issues = "https://github.com/Tensorcery/zoll/issues"
 
 [tool.maturin]
 bindings = "bin"
+# The injection queries sit beside the crates, not in one: a build from the
+# sdist embeds them (crates/zoll_core/build.rs).
+include = [{ path = "queries/**/*", format = "sdist" }]
 manifest-path = "crates/zoll/Cargo.toml"
 strip = true
 

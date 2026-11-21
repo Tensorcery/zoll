@@ -22,11 +22,45 @@ const MAX_TEXT_RATIO: usize = 64;
 /// The text every tree may hold, however small its file.
 const MIN_TEXT: usize = 1 << 20;
 
-/// The bytes of text the trees of a file of `len` bytes may hold in all:
-/// its own and its fragments', to any depth.
-#[must_use]
-pub fn text_budget(len: usize) -> Cell<usize> {
-    Cell::new(len.saturating_mul(MAX_TEXT_RATIO).max(MIN_TEXT))
+/// The nodes the trees of one file may hold in all. A node takes about 3 KB
+/// as a policy's input, so a dense file of `a;` would ask for gigabytes; a
+/// minified jQuery is 37 000 nodes.
+// ponytail: a fixed cap; a leaner node would let it grow.
+const MAX_NODES: usize = 1_000_000;
+
+/// What the trees of one file may still hold in all: its own and its
+/// fragments', to any depth.
+#[derive(Debug)]
+pub struct Budget {
+    /// Bytes of node text.
+    text: Cell<usize>,
+    nodes: Cell<usize>,
+}
+
+impl Budget {
+    /// The budget of a file of `len` bytes.
+    #[must_use]
+    pub fn new(len: usize) -> Self {
+        Self {
+            text: Cell::new(len.saturating_mul(MAX_TEXT_RATIO).max(MIN_TEXT)),
+            nodes: Cell::new(MAX_NODES),
+        }
+    }
+
+    /// Spends one node of `text` bytes, or says what there is too much of.
+    fn spend(&self, text: usize) -> Result<(), String> {
+        let Some(nodes) = self.nodes.get().checked_sub(1) else {
+            return Err("its trees hold more than a million nodes".to_owned());
+        };
+        let Some(left) = self.text.get().checked_sub(text) else {
+            return Err(format!(
+                "the text of its nodes is more than {MAX_TEXT_RATIO} times the file's"
+            ));
+        };
+        self.nodes.set(nodes);
+        self.text.set(left);
+        Ok(())
+    }
 }
 
 /// The grammar of a language and its `node-types.json`, when zoll was built
@@ -290,20 +324,15 @@ pub fn parse(language: &str, text: &str) -> Option<Result<Tree, String>> {
 ///
 /// # Errors
 ///
-/// The tree is deeper than zoll walks, or holds more text than `budget`
-/// has left, which it spends.
-pub fn value(
-    language: &str,
-    text: &str,
-    tree: &Tree,
-    budget: &Cell<usize>,
-) -> Result<Value, String> {
+/// The tree is deeper than zoll walks, or holds more text or nodes than
+/// `budget` has left, which it spends.
+pub fn value(language: &str, text: &str, tree: &Tree, budget: &Budget) -> Result<Value, String> {
     let node_types = grammar(language).map_or("[]", |(_, node_types)| node_types);
     let builder = Builder {
         text,
         multiple: multiple(language, node_types),
         columns: Columns::new(text),
-        text_left: budget,
+        budget,
     };
     builder.node(tree.root_node(), 0)
 }
@@ -349,6 +378,9 @@ fn multiple(language: &str, node_types: &str) -> &'static Multiple {
                     .collect();
                 (node.r#type, fields)
             })
+            // A keyword shares its name with the node it starts (Haskell's
+            // `do`), and has no fields to take the node's place with.
+            .filter(|(_, fields): &(_, HashSet<_>)| !fields.is_empty())
             .collect()
     })
 }
@@ -357,8 +389,8 @@ struct Builder<'a> {
     text: &'a str,
     multiple: &'a Multiple,
     columns: Columns,
-    /// The bytes of text the nodes not built yet may still take.
-    text_left: &'a Cell<usize>,
+    /// What the nodes not built yet may still take.
+    budget: &'a Budget,
 }
 
 impl Builder<'_> {
@@ -399,12 +431,7 @@ impl Builder<'_> {
         // Every node, not the leaves only: a policy reads a node's text
         // without knowing how its grammar nests it.
         let text = self.text.get(node.byte_range()).unwrap_or_default();
-        let Some(left) = self.text_left.get().checked_sub(text.len()) else {
-            return Err(format!(
-                "the text of its nodes is more than {MAX_TEXT_RATIO} times the file's"
-            ));
-        };
-        self.text_left.set(left);
+        self.budget.spend(text.len())?;
         object.insert("text".to_owned(), text.into());
         if !fields.is_empty() {
             object.insert("fields".to_owned(), Value::Object(fields));
@@ -471,6 +498,28 @@ impl Columns {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_budget_runs_out_of_nodes() {
+        let budget = Budget {
+            text: Cell::new(10),
+            nodes: Cell::new(1),
+        };
+        assert!(budget.spend(4).is_ok());
+        let error = budget.spend(0).err().unwrap_or_default();
+        assert!(error.contains("a million nodes"), "{error}");
+        // Nothing spent on a node refused.
+        assert_eq!(budget.text.get(), 6);
+    }
+
+    // A keyword of the same name, with no fields, does not hide the node's.
+    #[cfg(feature = "haskell")]
+    #[test]
+    fn a_keyword_does_not_hide_its_node_s_fields() {
+        let (_, node_types) = grammar("haskell").unwrap_or_else(|| unreachable!());
+        let multiple = multiple("haskell", node_types);
+        assert!(multiple.get("do").is_some_and(|f| f.contains("statement")));
+    }
 
     // The base set: a build with fewer languages leaves the others out.
     #[cfg(feature = "base")]

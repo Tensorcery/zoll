@@ -62,7 +62,7 @@ base = [
   "xml",
   "zig",
 ]
-awk = ["zoll_grammars/awk"]
+awk = ["dep:zoll_grammars", "zoll_grammars/awk"]
 bash = ["dep:tree-sitter-bash"]
 c = ["dep:tree-sitter-c"]
 c_sharp = ["dep:tree-sitter-c-sharp"]
@@ -73,7 +73,7 @@ dart = ["dep:tree-sitter-dart"]
 dockerfile = ["dep:tree-sitter-containerfile"]
 elixir = ["dep:tree-sitter-elixir"]
 go = ["dep:tree-sitter-go"]
-gotmpl = ["zoll_grammars/gotmpl"]
+gotmpl = ["dep:zoll_grammars", "zoll_grammars/gotmpl"]
 graphql = ["dep:tree-sitter-graphql"]
 groovy = ["dep:tree-sitter-groovy"]
 haskell = ["dep:tree-sitter-haskell"]
@@ -82,16 +82,16 @@ html = ["dep:tree-sitter-html"]
 ini = ["dep:tree-sitter-ini"]
 java = ["dep:tree-sitter-java"]
 javascript = ["dep:tree-sitter-javascript"]
-jq = ["zoll_grammars/jq"]
+jq = ["dep:zoll_grammars", "zoll_grammars/jq"]
 jsonnet = ["dep:tree-sitter-jsonnet"]
-just = ["zoll_grammars/just"]
+just = ["dep:zoll_grammars", "zoll_grammars/just"]
 kotlin = ["dep:tree-sitter-kotlin-ng"]
 lua = ["dep:tree-sitter-lua"]
 make = ["dep:tree-sitter-make"]
 markdown = ["dep:tree-sitter-md"]
 nginx = ["dep:tree-sitter-nginx"]
 nix = ["dep:tree-sitter-nix"]
-perl = ["zoll_grammars/perl"]
+perl = ["dep:zoll_grammars", "zoll_grammars/perl"]
 php = ["dep:tree-sitter-php"]
 powershell = ["dep:tree-sitter-powershell"]
 proto = ["dep:tree-sitter-proto"]
@@ -100,7 +100,7 @@ regex = ["dep:tree-sitter-regex"]
 ruby = ["dep:tree-sitter-ruby"]
 rust = ["dep:tree-sitter-rust"]
 scala = ["dep:tree-sitter-scala"]
-scss = ["zoll_grammars/scss"]
+scss = ["dep:zoll_grammars", "zoll_grammars/scss"]
 sql = ["dep:tree-sitter-sequel"]
 starlark = ["dep:tree-sitter-starlark"]
 svelte = ["dep:tree-sitter-svelte-ng"]
@@ -163,7 +163,7 @@ tree-sitter-typescript = { workspace = true, optional = true }
 tree-sitter-xml = { workspace = true, optional = true }
 tree-sitter-zig = { workspace = true, optional = true }
 tree-sitter-yaml.workspace = true
-zoll_grammars.workspace = true
+zoll_grammars = { workspace = true, optional = true }
 
 # `make queries`: Helix's injection queries into `queries/`. Its tests run
 # with the crate's.

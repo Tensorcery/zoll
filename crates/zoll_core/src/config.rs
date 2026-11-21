@@ -4,7 +4,10 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
+use std::fmt;
+
+use serde::de::{MapAccess, Visitor};
+use serde::{Deserialize, Deserializer};
 use toml::Spanned;
 
 use crate::error::{Error, SourceError};
@@ -39,9 +42,10 @@ pub struct Config {
     /// A package that is not a language name, bound to the language it runs on.
     #[serde(default)]
     pub packages: BTreeMap<String, String>,
-    /// A file name or glob, bound to its language.
-    #[serde(default)]
-    pub languages: BTreeMap<String, String>,
+    /// A file name or glob, bound to its language; in the order written,
+    /// as the first glob that matches wins.
+    #[serde(default, deserialize_with = "in_order")]
+    pub languages: Vec<(String, String)>,
     /// A glob, bound to the rule ids not reported in the files it matches.
     #[serde(default)]
     pub per_file_ignores: BTreeMap<String, Vec<Spanned<String>>>,
@@ -57,10 +61,29 @@ impl Default for Config {
             fail_on: FailOn::default(),
             rego_version: RegoVersion::default(),
             packages: BTreeMap::new(),
-            languages: BTreeMap::new(),
+            languages: Vec::new(),
             per_file_ignores: BTreeMap::new(),
         }
     }
+}
+
+/// A table's entries in the order written, which a map would sort.
+fn in_order<'de, D: Deserializer<'de>>(table: D) -> Result<Vec<(String, String)>, D::Error> {
+    struct Entries;
+    impl<'de> Visitor<'de> for Entries {
+        type Value = Vec<(String, String)>;
+        fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            f.write_str("a table")
+        }
+        fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+            let mut entries = Vec::new();
+            while let Some(entry) = map.next_entry()? {
+                entries.push(entry);
+            }
+            Ok(entries)
+        }
+    }
+    table.deserialize_map(Entries)
 }
 
 fn policy_dir() -> Vec<String> {
@@ -98,8 +121,8 @@ pub enum RegoVersion {
 pub struct Loaded {
     /// The settings.
     pub config: Config,
-    /// The directory of the config file found; the working directory when
-    /// none was, or when `--config` named one.
+    /// The directory of the config file; the working directory when there
+    /// is none.
     pub root: PathBuf,
     /// The config file; `None` when there is none.
     pub file: Option<PathBuf>,
@@ -137,15 +160,15 @@ pub fn discover(dir: &Path) -> Result<Loaded, Error> {
 }
 
 /// The config in this file, named by `--config`; its paths are relative to
-/// `dir`, the working directory.
+/// the file's directory, as a found config's are.
 ///
 /// # Errors
 ///
 /// The file is unreadable or invalid. A `pyproject.toml` without
 /// `[tool.zoll]` gives the defaults.
-pub fn load(path: &Path, dir: &Path) -> Result<Loaded, Error> {
+pub fn load(path: &Path) -> Result<Loaded, Error> {
     let config = parse(path)?.unwrap_or_default();
-    let root = dir.to_owned();
+    let root = path.parent().unwrap_or(path).to_owned();
     Ok(Loaded {
         config,
         root,

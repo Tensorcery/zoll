@@ -139,7 +139,7 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
             let paths: Vec<_> = paths
                 .iter()
                 .filter(|path| path.as_os_str() != "-")
-                .map(|path| cwd.join(path))
+                .map(|path| walk::clean(&cwd.join(path)))
                 .collect();
             let mut files = walk::files(&paths, &loaded.root, &loaded.config, &languages)?;
             if stdin {
@@ -179,7 +179,7 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
         Command::Inspect { file } => {
             let loaded = load_config(cli.config.as_deref(), cwd)?;
             let languages = Languages::new(&loaded.config.languages)?;
-            let path = cwd.join(file);
+            let path = walk::clean(&cwd.join(file));
             std::fs::metadata(&path).map_err(|e| Error::Io(path.clone(), e))?;
             let relative = walk::relative(&path, &loaded.root);
             let Some(language) = languages.of(Path::new(&relative), &path) else {
@@ -211,7 +211,8 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
             let mode = if *upgrade { Mode::Upgrade } else { Mode::Lock };
             let git = git::resolve(&loaded.root, &loaded.config.policies, mode)?;
             for (source, commit) in &git.changed {
-                writeln!(out, "{source} at {}", git::short(commit)).map_err(stdout)?;
+                writeln!(out, "{} at {}", git::redact(source), git::short(commit))
+                    .map_err(stdout)?;
             }
             Ok(false)
         }
@@ -225,7 +226,7 @@ fn stdout(error: io::Error) -> Error {
 /// The config `--config` names, or the one found from the working directory up.
 fn load_config(path: Option<&Path>, cwd: &Path) -> Result<config::Loaded, Error> {
     match path {
-        Some(path) => config::load(path, cwd),
+        Some(path) => config::load(&walk::clean(&cwd.join(path))),
         None => config::discover(cwd),
     }
 }

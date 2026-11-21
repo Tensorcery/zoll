@@ -26,26 +26,32 @@ pub(crate) fn write(
     out: &mut impl Write,
 ) -> io::Result<bool> {
     let results = results(checked, cwd);
-    match format {
-        Format::Text => text(&results, out)?,
-        Format::Json => {
-            let all: Vec<Value> = results.iter().map(Shown::json).collect();
-            serde_json::to_writer_pretty(&mut *out, &all)?;
-            writeln!(out)?;
-        }
-        Format::Github => github(&results, out)?,
-        Format::Sarif => {
-            serde_json::to_writer_pretty(&mut *out, &sarif(&results))?;
-            writeln!(out)?;
-        }
-    }
     let count = |severity| {
         results
             .iter()
             .filter(|r| r.found.violation.severity == severity)
             .count()
     };
-    Ok(count(Severity::Deny) > 0 || (fail_on == FailOn::Warn && count(Severity::Warn) > 0))
+    let fails = count(Severity::Deny) > 0 || (fail_on == FailOn::Warn && count(Severity::Warn) > 0);
+    let written = match format {
+        Format::Text => text(&results, out),
+        Format::Json => {
+            let all: Vec<Value> = results.iter().map(Shown::json).collect();
+            serde_json::to_writer_pretty(&mut *out, &all)
+                .map_err(io::Error::from)
+                .and_then(|()| writeln!(out))
+        }
+        Format::Github => github(&results, out),
+        Format::Sarif => serde_json::to_writer_pretty(&mut *out, &sarif(&results))
+            .map_err(io::Error::from)
+            .and_then(|()| writeln!(out)),
+    };
+    match written {
+        // `zoll check | head`: the reader stopped reading, and the run still
+        // found what it found.
+        Err(error) if error.kind() != io::ErrorKind::BrokenPipe => Err(error),
+        _ => Ok(fails),
+    }
 }
 
 /// A result, with what every report needs of its file.
@@ -231,11 +237,22 @@ fn sarif(results: &[Shown<'_>]) -> Value {
 }
 
 /// A path as a URI reference: `/` between its parts, any other byte outside
-/// RFC 3986's unreserved ones percent-encoded.
+/// RFC 3986's unreserved ones percent-encoded. A path outside the working
+/// directory is absolute, and a `file:` URI.
 fn uri(path: &str) -> String {
+    let path = path.replace('\\', "/");
+    let absolute = Path::new(&path).is_absolute() || path.starts_with('/');
     let mut uri = String::with_capacity(path.len());
-    for byte in path.replace('\\', "/").bytes() {
-        if byte.is_ascii_alphanumeric() || b"-._~/".contains(&byte) {
+    if absolute {
+        // `file:///C:/x` on Windows, `file:///x` elsewhere.
+        uri.push_str(if path.starts_with('/') {
+            "file://"
+        } else {
+            "file:///"
+        });
+    }
+    for byte in path.bytes() {
+        if byte.is_ascii_alphanumeric() || b"-._~/".contains(&byte) || (absolute && byte == b':') {
             uri.push(char::from(byte));
         } else {
             // Writing to a String cannot fail.

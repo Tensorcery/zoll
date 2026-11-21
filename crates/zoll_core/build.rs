@@ -10,6 +10,14 @@ const FILES: [&str; 2] = ["injections.scm", "zoll.scm"];
 fn main() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../queries");
     println!("cargo::rerun-if-changed={}", root.display());
+    // Without them zoll would find no embedded code, and say nothing.
+    if !root.join("languages.toml").is_file() {
+        println!(
+            "cargo::error={} holds no injection queries: build zoll from its repository, or from an sdist that ships queries/",
+            root.display()
+        );
+        return;
+    }
     // `injections.scm` is copied from Helix; `zoll.scm` is zoll's own, for
     // what Helix's do not find with the grammar zoll has.
     let mut dirs: Vec<_> = std::fs::read_dir(&root)

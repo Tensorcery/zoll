@@ -2,6 +2,7 @@
 //! and the facts zoll and conftest put under `data` (docs/design.md,
 //! sections 8.1 and 8.3).
 
+use std::collections::HashMap;
 use std::ops::Range;
 use std::path::Path;
 use std::sync::Arc;
@@ -11,11 +12,11 @@ use serde_json::{Value, json};
 use tree_sitter::{Node, Tree};
 
 use crate::code;
+use crate::decode::Map;
 use crate::document::{self, Document, Origin, Place, Step};
 use crate::error::{Error, SourceError};
-use crate::injection::{self, Map, Target};
+use crate::injection::{self, Target};
 use crate::language;
-use crate::policy::Severity;
 use crate::walk::File;
 
 /// The rule id of a file or fragment that does not parse (docs/design.md,
@@ -25,6 +26,18 @@ pub const PARSE: &str = "zoll.parse";
 /// The rule id of a fragment of a language this zoll has no grammar for
 /// (docs/design.md, section 14).
 pub const UNCHECKED: &str = "zoll.unchecked";
+
+/// How much a result weighs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Severity {
+    /// zoll's own word on what it could not check: shown, never fails the
+    /// run.
+    Notice,
+    /// A `warn` rule's: shown, and fails the run only with `fail-on = "warn"`.
+    Warn,
+    /// A `deny` or `violation` rule's: fails the run.
+    Deny,
+}
 
 /// How deep fragments are looked for in fragments.
 const MAX_NESTING: usize = 8;
@@ -53,6 +66,8 @@ pub struct Source {
     pub text: String,
     /// Its bytes to the file's.
     pub map: Map,
+    /// Where its documents' paths are, found when a result first asks.
+    pub index: std::sync::OnceLock<crate::document::Index>,
 }
 
 /// What zoll itself has to say about the code in a file: a fragment it did
@@ -94,7 +109,7 @@ pub fn read(file: &File) -> Result<String, Error> {
 pub fn evaluations(file: &File, text: &str) -> Result<(Vec<Evaluation>, Vec<Note>), Error> {
     let mut walk = Walk {
         file,
-        budget: code::text_budget(text.len()),
+        budget: code::Budget::new(text.len()),
         evaluations: Vec::new(),
         notes: Vec::new(),
     };
@@ -102,6 +117,7 @@ pub fn evaluations(file: &File, text: &str) -> Result<(Vec<Evaluation>, Vec<Note
         language: file.language,
         text: text.to_owned(),
         map: Map::identity(text.len()),
+        index: std::sync::OnceLock::new(),
     });
     let zoll = json!({"path": file.relative, "language": file.language});
     walk.source(&source, &zoll, 0)?;
@@ -110,8 +126,8 @@ pub fn evaluations(file: &File, text: &str) -> Result<(Vec<Evaluation>, Vec<Note
 
 struct Walk<'a> {
     file: &'a File,
-    /// The text the file's trees may still hold, its fragments' included.
-    budget: std::cell::Cell<usize>,
+    /// What the file's trees may still hold, its fragments' included.
+    budget: code::Budget,
     evaluations: Vec<Evaluation>,
     notes: Vec<Note>,
 }
@@ -152,6 +168,7 @@ impl Walk<'_> {
             (vec![document], Some(tree))
         };
         let data = data(self.file, zoll);
+        let first = self.evaluations.len();
         for document in documents {
             self.evaluations.push(Evaluation {
                 input: document.value,
@@ -161,8 +178,8 @@ impl Walk<'_> {
             });
         }
         match tree {
-            Some(tree) if depth < MAX_NESTING => self.fragments(source, zoll, &tree, depth),
-            _ => Ok(()),
+            Some(tree) => self.fragments(source, zoll, &tree, depth, first),
+            None => Ok(()),
         }
     }
 
@@ -172,6 +189,7 @@ impl Walk<'_> {
         zoll: &Value,
         tree: &Tree,
         depth: usize,
+        first: usize,
     ) -> Result<(), Error> {
         let text = source.text.as_str();
         let fragments = injection::fragments(source.language, text, tree).map_err(Error::Other)?;
@@ -186,7 +204,29 @@ impl Walk<'_> {
                 .find('\n')
                 .map_or(node.end, |i| node.start + i);
             let span = source.map.span(node.start..line);
-            let language = match fragment.language {
+            if depth >= MAX_NESTING {
+                self.unchecked(
+                    span,
+                    &format!("it is nested more than {MAX_NESTING} fragments deep"),
+                );
+                continue;
+            }
+            // Where the fragment sits: a path in one of the host's
+            // documents (its index among them), or a node of its tree.
+            let place = paths
+                .as_ref()
+                .map(|paths| self.place(first, paths, tree, &fragment.node));
+            let mut target = fragment.language;
+            if let Some((document, path)) = &place
+                && target == Target::Zoll("bash")
+                && let Some(shell) = self
+                    .evaluations
+                    .get(*document)
+                    .and_then(|e| shell(&e.input, path))
+            {
+                target = shell;
+            }
+            let language = match target {
                 Target::Zoll(language) if language::compiled(language) => language,
                 Target::Zoll(language) => {
                     self.unchecked(span, &format!("this zoll was built without {language}"));
@@ -197,18 +237,22 @@ impl Walk<'_> {
                     continue;
                 }
             };
-            let at = match &paths {
-                Some(paths) => path_at(paths, tree, &fragment.node),
-                None => node_at(text, &fragment.kind, fragment.node.clone()),
-            };
             let mut host = zoll.clone();
             if let Some(host) = host.as_object_mut() {
-                host.insert("at".to_owned(), at);
+                if let Some((document, path)) = &place {
+                    let steps = path.iter().map(Step::to_json).collect();
+                    host.insert("at".to_owned(), Value::Array(steps));
+                    host.insert("document".to_owned(), Value::from(document - first));
+                } else {
+                    let at = node_at(text, &fragment.kind, fragment.node.clone());
+                    host.insert("at".to_owned(), at);
+                }
             }
             let child = Arc::new(Source {
                 language,
                 map: fragment.map.then(&source.map),
                 text: fragment.text,
+                index: std::sync::OnceLock::new(),
             });
             let zoll = json!({"path": self.file.relative, "language": language, "host": host});
             match self.source(&child, &zoll, depth + 1) {
@@ -244,6 +288,30 @@ impl Walk<'_> {
         Ok(())
     }
 
+    /// The evaluation of the host (by its index among all) a fragment of a
+    /// data document is in, and its path in that evaluation's `input`: the
+    /// item of a root array is an input of its own, its index not in the
+    /// path.
+    fn place(
+        &self,
+        first: usize,
+        paths: &HashMap<usize, (usize, Vec<Step>)>,
+        tree: &Tree,
+        node: &Range<usize>,
+    ) -> (usize, Vec<Step>) {
+        let (document, mut path) = path_at(paths, tree, node);
+        let host = &self.evaluations[first.min(self.evaluations.len())..];
+        let split = host.iter().any(|e| e.origin.item.is_some());
+        let index = if split && let Some(Step::Index(item)) = path.first() {
+            let item = *item;
+            path.remove(0);
+            host.iter().position(|e| e.origin.item == Some(item))
+        } else {
+            host.iter().position(|e| e.origin.document == document)
+        };
+        (first + index.unwrap_or(0), path)
+    }
+
     fn unchecked(&mut self, span: Range<usize>, why: &str) {
         self.notes.push(Note {
             rule: UNCHECKED,
@@ -257,20 +325,59 @@ impl Walk<'_> {
 /// Where a fragment sits in a data document: the path of the nearest of its
 /// nodes that has one.
 fn path_at(
-    paths: &std::collections::HashMap<usize, Vec<Step>>,
+    paths: &HashMap<usize, (usize, Vec<Step>)>,
     tree: &Tree,
     node: &Range<usize>,
-) -> Value {
+) -> (usize, Vec<Step>) {
     let mut at: Option<Node<'_>> = tree
         .root_node()
         .descendant_for_byte_range(node.start, node.end);
     while let Some(node) = at {
-        if let Some(path) = paths.get(&node.start_byte()) {
-            return Value::Array(path.iter().map(Step::to_json).collect());
+        if let Some(found) = paths.get(&node.start_byte()) {
+            return found.clone();
         }
         at = node.parent();
     }
-    Value::Array(Vec::new())
+    (0, Vec::new())
+}
+
+/// `defaults.run.shell` of a workflow or a job.
+fn default_shell(value: Option<&Value>) -> Option<&str> {
+    value?.get("defaults")?.get("run")?.get("shell")?.as_str()
+}
+
+/// The language a workflow step's `run:` at `path` of `document` is in:
+/// its `shell:`, its job's `defaults.run.shell`, or the workflow's (GitHub
+/// Actions); `None` when none is set or the file is not a workflow.
+fn shell(document: &Value, path: &[Step]) -> Option<Target> {
+    let [steps @ .., Step::Index(_), Step::Key(run)] = path else {
+        return None;
+    };
+    if run != "run" || !matches!(steps.last(), Some(Step::Key(k)) if k == "steps") {
+        return None;
+    }
+    let at = |path: &[Step]| {
+        path.iter().try_fold(document, |value, step| match step {
+            Step::Key(key) => value.get(key),
+            Step::Index(i) => value.get(i),
+        })
+    };
+    let shell = at(&path[..path.len() - 1])
+        .and_then(|step| step.get("shell")?.as_str())
+        .or_else(|| default_shell(at(&steps[..steps.len() - 1])))
+        .or_else(|| default_shell(Some(document)))?;
+    // `bash -e {0}`, `/usr/bin/python3 {0}`: the program, by its name.
+    let program = shell.split_whitespace().next()?;
+    let program = program.rsplit(['/', '\\']).next()?;
+    let program = program.trim_end_matches(".exe");
+    match program {
+        "bash" | "sh" => None,
+        "pwsh" | "powershell" => Some(Target::Zoll("powershell")),
+        _ => Some(
+            injection::resolve(program.trim_end_matches(|c: char| c.is_ascii_digit() || c == '.'))
+                .unwrap_or_else(|| Target::Lacking(program.to_owned())),
+        ),
+    }
 }
 
 /// Where a fragment sits in code: its node, as the host's tree has it
