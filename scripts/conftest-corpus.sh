@@ -8,8 +8,10 @@ set -euo pipefail
 cd "$(dirname "$0")/../crates/zoll/tests/corpus"
 for file in *; do
   case "$file" in
-    *.conftest.json) continue ;;
+    *.conftest.json | *.conftest.json.new) continue ;;
   esac
-  # conftest gives a TOML local date in the machine's time zone.
-  TZ=UTC conftest parse "$file" >"$file.conftest.json"
+  # conftest gives a TOML local date in the machine's time zone. Written
+  # aside first: a conftest that fails leaves the committed file as it was.
+  TZ=UTC conftest parse "$file" >"$file.conftest.json.new"
+  mv "$file.conftest.json.new" "$file.conftest.json"
 done

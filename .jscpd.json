@@ -1,7 +1,7 @@
 {
   "threshold": 0,
   "gitignore": true,
-  "ignore": ["**/Cargo.lock", "**/uv.lock", "**/LICENSE", "**/*.snap", "**/docs/langs/**", "**/queries/**", "**/tests/corpus/**", "**/tests/fixtures/**", "**/zoll_grammars/vendor/**"],
+  "ignore": ["**/Cargo.lock", "**/uv.lock", "**/LICENSE", "**/*.snap", "**/docs/langs/**", "**/queries/**", "**/tests/corpus/**", "**/zoll_grammars/vendor/**"],
   "reporters": ["console"],
   "absolute": false
 }

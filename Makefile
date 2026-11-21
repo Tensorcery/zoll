@@ -5,10 +5,12 @@
 .PHONY: help install fmt lint test build queries
 
 UV := env -u VIRTUAL_ENV uv run
-# zizmor's online audits ask GitHub; the token is gh's own.
-export GH_TOKEN ?= $(shell gh auth token 2> /dev/null)
+# zizmor's online audits ask GitHub; the token is gh's own, handed to zizmor
+# alone, not to every build script cargo runs.
+GH_TOKEN ?= $(shell gh auth token 2> /dev/null)
 
-SCRIPTS = $(shell find . -name '*.sh' -not -path './.venv/*' -not -path './target/*')
+# The repository's own: not a roast's or a build's.
+SCRIPTS = $(shell git ls-files '*.sh')
 WORKFLOWS = $(wildcard .github/workflows/*.yml)
 
 help:     ## list the targets
@@ -17,7 +19,7 @@ help:     ## list the targets
 install:  ## the tools and the git hooks: once after a clone
 	uv sync
 	cargo fetch --locked
-	cargo install --locked cargo-deny
+	cargo install --locked cargo-deny cargo-insta
 	$(UV) pre-commit install
 
 fmt:      ## format the Rust code in place
@@ -26,6 +28,8 @@ fmt:      ## format the Rust code in place
 lint:     ## the static checks: the CI lint job
 	cargo fmt --all --check
 	cargo clippy --locked --all-targets --all-features -- -D warnings
+# A build of fewer languages, as a user may choose one (design.md, section 5).
+	cargo clippy --locked --workspace --all-targets --no-default-features -- -D warnings
 	cargo deny check
 	$(UV) yamllint --strict .
 ifneq ($(SCRIPTS),)
@@ -35,7 +39,7 @@ endif
 ifneq ($(WORKFLOWS),)
 	$(UV) actionlint $(WORKFLOWS)
 endif
-	$(UV) zizmor .
+	GH_TOKEN=$(GH_TOKEN) $(UV) zizmor .
 # Not from inside a hook: pre-commit is what is running this.
 ifndef PRE_COMMIT
 	$(UV) pre-commit run --all-files --show-diff-on-failure

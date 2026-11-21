@@ -10,8 +10,8 @@ update_changelog_on_bump = true
 changelog_incremental = true
 # Before 1.0 a breaking change raises the minor version.
 major_version_zero = true
+# The subject's; the commit-msg hook passes it to `cz check` as `-l 72`.
 message_length_limit = 72
-body_length_limit = 100
 
 [tool.commitizen.change_type_map]
 feat = "Features"

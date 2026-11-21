@@ -31,3 +31,25 @@ updates:
     commit-message:
       prefix: ci
       include: scope
+
+  # The hooks' `rev`s; jscpd's pin in `additional_dependencies` is not one
+  # of them, and is bumped by hand.
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: rust-toolchain
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: build
+      include: scope

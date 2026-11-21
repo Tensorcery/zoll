@@ -1,6 +1,8 @@
 /target/
 /dist/
 .venv/
+# roast runs: their study, proofs and sandbox copies
+/.roast/
 # insta's snapshots waiting for review
 *.snap.new
 *.pending-snap
