@@ -2,7 +2,7 @@
 # when these pass here.
 
 .DEFAULT_GOAL := help
-.PHONY: help install fmt lint test build smoke commits queries
+.PHONY: help install fmt lint lint-windows test build smoke commits queries
 
 UV := env -u VIRTUAL_ENV uv run
 
@@ -45,6 +45,10 @@ endif
 ifndef PRE_COMMIT
 	$(UV) pre-commit run --all-files --show-diff-on-failure
 endif
+
+lint-windows:  ## clippy for Windows, as CI's lint job runs it; needs mingw-w64
+	rustup target add x86_64-pc-windows-gnu
+	cargo clippy --locked --all-targets --all-features --target x86_64-pc-windows-gnu -- -D warnings
 
 test:     ## the tests; a changed snapshot fails until `cargo insta review` takes it
 	cargo test --locked --all-features
