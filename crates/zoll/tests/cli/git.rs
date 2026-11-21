@@ -288,6 +288,8 @@ fn a_server_that_never_answers_times_out() -> TestResult {
     Ok(())
 }
 
+// A symbolic link on Windows needs a privilege a test does not have.
+#[cfg(unix)]
 #[test]
 fn a_link_out_of_the_repository_is_refused() -> TestResult {
     let upstream = Upstream::new()?;

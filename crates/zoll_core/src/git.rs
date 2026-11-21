@@ -429,6 +429,15 @@ fn git(dir: &Path, args: &[&str]) -> Result<String, Error> {
             Ok(Some(status)) => break status,
             Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(20)),
             Ok(None) => {
+                // Git for Windows' `git` starts the real one, which starts
+                // `git-remote-http`: killing the first alone leaves them
+                // running, holding the pipes it inherited.
+                #[cfg(windows)]
+                let _ = Command::new("taskkill")
+                    .args(["/T", "/F", "/PID", &child.id().to_string()])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status();
                 let _ = child.kill();
                 let _ = child.wait();
                 return Err(Error::Other(format!(
@@ -480,7 +489,16 @@ mod tests {
         std::fs::create_dir(&old)?;
         std::fs::create_dir(&new)?;
         let long_ago = std::time::SystemTime::now() - STALE - Duration::from_secs(60);
-        std::fs::File::open(&old)?.set_modified(long_ago)?;
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true);
+        // Windows opens a directory only with FILE_FLAG_BACKUP_SEMANTICS,
+        // and sets its time only with FILE_WRITE_ATTRIBUTES.
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            options.access_mode(0x100).custom_flags(0x0200_0000);
+        }
+        options.open(&old)?.set_modified(long_ago)?;
         sweep(cache.path());
         assert!(!old.exists());
         assert!(new.exists(), "a fetch under way stays");

@@ -31,7 +31,8 @@ fn unknown_format() {
 #[test]
 fn inspect_not_built() -> TestResult {
     let repo = Repo::new(&[])?;
-    assert_cmd_snapshot!(repo.zoll("").args(["inspect", "a.yml"]));
+    repo.settings()?
+        .bind(|| assert_cmd_snapshot!(repo.zoll("").args(["inspect", "a.yml"])));
     Ok(())
 }
 

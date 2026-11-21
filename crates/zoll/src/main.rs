@@ -4,6 +4,7 @@ use std::env;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::thread;
 
 use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use anstream::AutoStream;
@@ -33,7 +34,8 @@ const STYLES: Styles = Styles::styled()
 /// code, and the code embedded in either - awk in a shell string, shell in a
 /// YAML `run:`.
 #[derive(Parser)]
-#[command(version, styles = STYLES)]
+// `zoll`, not `zoll.exe` on Windows, in the help and the errors.
+#[command(version, bin_name = "zoll", styles = STYLES)]
 struct Cli {
     /// This config instead of the one found from the working directory up.
     #[arg(long, global = true, value_name = "PATH")]
@@ -102,7 +104,27 @@ const VIOLATIONS: u8 = 1;
 /// not load.
 const FAILED: u8 = 2;
 
+/// The stack of each thread that walks a tree. Windows gives its main thread
+/// 1 MiB, Linux 8: the limits on how deep a tree nests hold on every system
+/// only with a stack of their own.
+const STACK: usize = 16 << 20;
+
 fn main() -> ExitCode {
+    // Fails only when the pool is built already.
+    let _ = rayon::ThreadPoolBuilder::new()
+        .stack_size(STACK)
+        .build_global();
+    match thread::Builder::new().stack_size(STACK).spawn(command) {
+        // A panic has said what it was.
+        Ok(handle) => handle.join().unwrap_or(ExitCode::from(FAILED)),
+        Err(error) => {
+            let _ = writeln!(io::stderr(), "error: no thread to run in: {error}");
+            ExitCode::from(FAILED)
+        }
+    }
+}
+
+fn command() -> ExitCode {
     let cli = Cli::parse();
     let color = stream_color(cli.color);
     let mut stderr = AutoStream::new(io::stderr().lock(), color);
@@ -265,9 +287,15 @@ fn render(error: &Error, cwd: &Path) -> String {
 }
 
 /// A path as the user would type it: relative to the working directory when
-/// it is under it.
+/// it is under it. `/` between its parts on every system, as in the globs of
+/// the config and in GitHub's annotations.
 pub(crate) fn shown(path: &Path, cwd: &Path) -> String {
-    path.strip_prefix(cwd).unwrap_or(path).display().to_string()
+    let shown = path.strip_prefix(cwd).unwrap_or(path).display().to_string();
+    if cfg!(windows) {
+        shown.replace('\\', "/")
+    } else {
+        shown
+    }
 }
 
 fn stream_color(choice: ColorChoice) -> anstream::ColorChoice {

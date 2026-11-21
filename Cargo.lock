@@ -2062,6 +2062,7 @@ dependencies = [
  "clap",
  "insta",
  "insta-cmd",
+ "rayon",
  "serde_json",
  "tempfile",
  "zoll_core",
