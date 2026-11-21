@@ -346,10 +346,68 @@ fn default_shell(value: Option<&Value>) -> Option<&str> {
     value?.get("defaults")?.get("run")?.get("shell")?.as_str()
 }
 
-/// Programs that run the command after them, as `shell:` may name them.
-const WRAPPERS: [&str; 10] = [
-    "command", "doas", "env", "exec", "ionice", "nice", "nohup", "stdbuf", "sudo", "timeout",
+/// Programs that run the command after them, as `shell:` may name them:
+/// each with its flags that take a value, and those that take none.
+const WRAPPERS: [(&str, &str, &str); 10] = [
+    ("command", "", "pvV"),
+    ("doas", "Cu", "ns"),
+    ("env", "CPSu", "0iv"),
+    ("exec", "a", "cl"),
+    ("ionice", "cnpPu", "t"),
+    ("nice", "n", ""),
+    ("nohup", "", ""),
+    ("stdbuf", "eio", ""),
+    ("sudo", "CDghpRrTtUu", "AbEeHiKklnPSsVv"),
+    ("timeout", "ks", "v"),
 ];
+
+/// The program a `shell:` runs, by its name, past any wrappers: `env -i
+/// PATH=/bin nice -n 5 /bin/bash -e {0}` is `bash`. `false` beside it when
+/// a wrapper's flag is not known, and might have taken the word that looks
+/// like the program as its value.
+fn program(shell: &str) -> Option<(String, bool)> {
+    let unquote = |word: &'_ str| word.trim_matches(['\'', '"']).to_owned();
+    let mut sure = true;
+    let mut wrapper: Option<(&str, &str)> = None;
+    let mut words = shell.split_whitespace().map(unquote);
+    while let Some(word) = words.next() {
+        if let Some(flag) = word.strip_prefix('-') {
+            let Some((value, none)) = wrapper else {
+                sure = false;
+                continue;
+            };
+            if let Some(long) = flag.strip_prefix('-') {
+                // `--signal=KILL` holds its value, `--` ends the flags; a
+                // long flag that may take the next word is not known.
+                sure &= long.is_empty() || long.contains('=') || long == "preserve-status";
+                continue;
+            }
+            // `-iu VAR`, `-n5`: as getopt reads a cluster of short flags.
+            for (i, letter) in flag.char_indices() {
+                if value.contains(letter) {
+                    if i + letter.len_utf8() == flag.len() {
+                        words.next();
+                    }
+                    break;
+                }
+                sure &= none.contains(letter);
+            }
+            continue;
+        }
+        // `NAME=value` for env, a number or duration for nice and timeout,
+        // the script's `{0}`.
+        if word.contains('=') || word.starts_with(|c: char| c.is_ascii_digit() || c == '{') {
+            continue;
+        }
+        let name = word.rsplit(['/', '\\']).next().unwrap_or(&word);
+        let name = name.trim_end_matches(".exe");
+        match WRAPPERS.iter().find(|(known, _, _)| *known == name) {
+            Some((_, value, none)) => wrapper = Some((value, none)),
+            None => return Some((name.to_owned(), sure)),
+        }
+    }
+    None
+}
 
 /// The language a workflow step's `run:` at `path` of `document` is in:
 /// its `shell:`, its job's `defaults.run.shell`, or the workflow's (GitHub
@@ -371,23 +429,13 @@ fn shell(document: &Value, path: &[Step]) -> Option<Target> {
         .and_then(|step| step.get("shell")?.as_str())
         .or_else(|| default_shell(at(&steps[..steps.len() - 1])))
         .or_else(|| default_shell(Some(document)))?;
-    // `bash -e {0}`, `/usr/bin/python3 {0}`: the program, by its name. A
-    // wrapper (`env`, `nice -n 5`, `timeout 10m`) runs the word after it,
-    // its flags, settings and numbers skipped: `env bash {0}` is bash.
-    let name = |word: &str| -> String {
-        let word = word.rsplit(['/', '\\']).next().unwrap_or(word);
-        word.trim_end_matches(".exe").to_owned()
-    };
-    let program = shell
-        .split_whitespace()
-        .filter(|word| {
-            !word.starts_with(['-', '{'])
-                && !word.contains('=')
-                && !word.starts_with(|c: char| c.is_ascii_digit())
-        })
-        .map(name)
-        .find(|word| !WRAPPERS.contains(&word.as_str()))?;
+    let (program, sure) = program(shell)?;
     let program = program.as_str();
+    // Not sure what runs: bash, the default, so bash's policies still run
+    // on it, rather than a guess that would take it out of them.
+    if !sure {
+        return None;
+    }
     match program {
         "bash" | "sh" => None,
         "pwsh" | "powershell" => Some(Target::Zoll("powershell")),
@@ -421,4 +469,35 @@ fn data(file: &File, zoll: &Value) -> Value {
         "conftest": {"file": {"name": name, "dir": dir}},
         "zoll": {"file": zoll},
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_shell_s_program_is_found_past_its_wrappers() {
+        for (shell, found) in [
+            ("bash -e {0}", Some(("bash", true))),
+            ("/usr/bin/python3 {0}", Some(("python3", true))),
+            (
+                "env -i PATH=/bin nice -n 5 /bin/bash -e {0}",
+                Some(("bash", true)),
+            ),
+            ("timeout 10m perl {0}", Some(("perl", true))),
+            ("stdbuf -oL python {0}", Some(("python", true))),
+            // The word after a flag that takes a value is that value.
+            ("sudo -u perl bash {0}", Some(("bash", true))),
+            ("env -iu perl bash {0}", Some(("bash", true))),
+            ("nice -n5 ruby {0}", Some(("ruby", true))),
+            // A flag not known: perl may be its value.
+            ("sudo -X perl bash {0}", Some(("perl", false))),
+            ("env --frob perl bash {0}", Some(("perl", false))),
+            ("{0}", None),
+        ] {
+            let program = program(shell);
+            let program = program.as_ref().map(|(p, sure)| (p.as_str(), *sure));
+            assert_eq!(program, found, "{shell}");
+        }
+    }
 }
