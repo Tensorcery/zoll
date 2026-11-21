@@ -91,6 +91,16 @@ impl Repo {
         for path in spellings {
             settings.add_filter(&escape(&path), "[REPO]");
         }
+        if cfg!(windows) {
+            // A path in JSON past [REPO], as Unix spells it: no snapshot
+            // holds a `\\` of its own.
+            settings.add_filter(r"\\\\", "/");
+            // A file that is not there, as Unix says it.
+            settings.add_filter(
+                r"The system cannot find the file specified\.",
+                "No such file or directory",
+            );
+        }
         Ok(settings)
     }
 }
