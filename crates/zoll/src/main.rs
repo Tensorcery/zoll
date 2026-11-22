@@ -73,6 +73,11 @@ enum Command {
         /// check none.
         #[arg(long)]
         show_files: bool,
+
+        /// Leave out a file named in PATHS that `exclude` leaves out, as a
+        /// pre-commit hook needs: it names every staged file.
+        #[arg(long)]
+        force_exclude: bool,
     },
     /// Print the input a policy sees for a file and for each fragment in it.
     Inspect {
@@ -154,6 +159,7 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
             fail_on,
             locked,
             format,
+            force_exclude,
         } => {
             let loaded = load_config(cli.config.as_deref(), cwd)?;
             let languages = Languages::new(&loaded.config.languages)?;
@@ -163,7 +169,13 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
                 .filter(|path| path.as_os_str() != "-")
                 .map(|path| walk::clean(&cwd.join(path)))
                 .collect();
-            let mut files = walk::files(&paths, &loaded.root, &loaded.config, &languages)?;
+            let mut files = walk::files(
+                &paths,
+                &loaded.root,
+                &loaded.config,
+                &languages,
+                *force_exclude,
+            )?;
             if stdin {
                 // The standard input is YAML, as conftest takes it: what `helm
                 // template` prints, piped in.
