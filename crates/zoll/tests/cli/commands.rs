@@ -15,7 +15,10 @@ fn check_help() {
 
 #[test]
 fn version() {
-    assert_cmd_snapshot!(zoll().arg("--version"));
+    // The version a bump raises; the snapshot holds its place.
+    let mut settings = insta::Settings::clone_current();
+    settings.add_filter(&crate::escape(env!("CARGO_PKG_VERSION")), "[VERSION]");
+    settings.bind(|| assert_cmd_snapshot!(zoll().arg("--version")));
 }
 
 #[test]
