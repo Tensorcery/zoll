@@ -12,9 +12,10 @@ set -euo pipefail
 
 uv publish --trusted-publishing always --check-url https://pypi.org/simple/ dist/*
 
-# The note to whoever edits the pull request is not for the reader.
+# Two lines are not for the reader: the note to whoever edits the pull
+# request, and the line CodeRabbit was to replace, if it never came.
 notes=$(gh pr list --state merged --head "release/v$VERSION" --json body --jq '.[0].body // ""' \
-  | tr -d '\r' | sed -e '/^<!--.*-->$/d')
+  | tr -d '\r' | sed -e '/^<!--.*-->$/d' -e '/^@coderabbitai summary$/d')
 
 if [ -n "${notes//[[:space:]]/}" ]; then
   gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --title "v$VERSION" --notes-file - <<< "$notes"

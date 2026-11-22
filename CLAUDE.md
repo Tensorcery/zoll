@@ -99,6 +99,9 @@ over the PR's commits. Each is a check main requires.
 
 `prepare release`, started by hand, bumps the version with commitizen on
 `release/v<next>` and opens its PR; its description becomes the release's.
+CodeRabbit writes the top of it, a summary for users of the changelog
+section, as `.coderabbit.yaml` asks; whatever stands there at the merge is
+published.
 Merging it is the release: `release.yml` sees a version on main with no
 tag, builds a wheel per platform natively and the sdist, tries each wheel
 where it was built, publishes them to PyPI by Trusted Publishing and
