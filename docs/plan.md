@@ -188,7 +188,10 @@ fixed, with a test.
 - [x] wheels built by `maturin-action` for Linux (x86_64, aarch64), macOS
       (x86_64, arm64) and Windows
 - [x] the release workflow publishes to PyPI by Trusted Publishing
-- [ ] a pre-commit hook definition (`.pre-commit-hooks.yaml`) for users
+- [x] pre-commit: the README's local hook runs the zoll `uv.lock` pins, the
+      one version `make` and CI run too. A hook repository of its own
+      (`.pre-commit-hooks.yaml`, a `rev:` per release) waits until someone
+      asks for it: its `rev:` is a second copy of the version
 - [x] the README's interface is true: the design status banner goes
 - [ ] CI runs a corpus of real conftest policies through OPA and zoll and
       compares (design.md, section 13)

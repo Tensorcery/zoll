@@ -124,6 +124,26 @@ The command is `zoll`; the PyPI name `zoll` is taken by a look-alike.
 Wheels are built for Linux (x86_64, aarch64), macOS (x86_64, arm64) and
 Windows.
 
+## pre-commit
+
+zoll is a dev dependency, so the hook, `make` and CI run the one version
+`uv.lock` holds:
+
+```bash
+uv add --dev zoll-lint
+```
+
+```yaml
+- repo: local
+  hooks:
+    - id: zoll
+      name: zoll
+      entry: uv run --locked zoll check
+      language: system
+      types: [file]
+      require_serial: true
+```
+
 ## In CI
 
 On GitHub, each violation becomes an annotation on its line:

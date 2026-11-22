@@ -124,6 +124,26 @@ uv tool install zoll-lint
 Команда — `zoll`; имя `zoll` на PyPI занято похожим проектом. Колёса
 собираются для Linux (x86_64, aarch64), macOS (x86_64, arm64) и Windows.
 
+## pre-commit
+
+zoll ставится как dev-зависимость, и hook, `make` и CI запускают одну и ту
+же версию из `uv.lock`:
+
+```bash
+uv add --dev zoll-lint
+```
+
+```yaml
+- repo: local
+  hooks:
+    - id: zoll
+      name: zoll
+      entry: uv run --locked zoll check
+      language: system
+      types: [file]
+      require_serial: true
+```
+
 ## В CI
 
 На GitHub каждое нарушение становится аннотацией на своей строке:
