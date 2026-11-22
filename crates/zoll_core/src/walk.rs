@@ -29,7 +29,9 @@ pub struct File {
 /// The files under `paths` that have a language, in path order.
 ///
 /// A file named in `paths` itself is checked even when `include` or
-/// `exclude` would leave it out, as ruff does.
+/// `exclude` would leave it out, as ruff does; with `force_exclude`,
+/// `exclude` leaves it out too, as ruff's `--force-exclude` does: a
+/// pre-commit hook names every staged file.
 ///
 /// # Errors
 ///
@@ -40,6 +42,7 @@ pub fn files(
     root: &Path,
     config: &Config,
     languages: &Languages,
+    force_exclude: bool,
 ) -> Result<Vec<File>, Error> {
     for path in paths {
         std::fs::metadata(path).map_err(|e| Error::Io(path.clone(), e))?;
@@ -85,7 +88,12 @@ pub fn files(
             let named = entry.depth() == 0;
             // ponytail: `exclude` is matched against files, so an excluded
             // directory is still walked; prune it when a big one shows.
-            let wanted = named || (include.is_match(&relative) && !exclude.is_match(&relative));
+            let excluded = exclude.is_match(&relative);
+            let wanted = if named {
+                !(force_exclude && excluded)
+            } else {
+                include.is_match(&relative) && !excluded
+            };
             if wanted && let Some(language) = languages.of(Path::new(&relative), path) {
                 let file = File {
                     path: path.to_owned(),

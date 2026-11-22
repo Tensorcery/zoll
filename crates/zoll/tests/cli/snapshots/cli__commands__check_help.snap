@@ -23,6 +23,7 @@ Options:
       --fail-on <FAIL_ON>  Which results fail the run; overrides the config's `fail-on` [possible values: deny, warn]
       --locked             Fail when `zoll.lock` does not match the config's git policies
       --show-files         List the files that would be checked, each with its language, and check none
+      --force-exclude      Leave out a file named in PATHS that `exclude` leaves out, as a pre-commit hook needs: it names every staged file
   -h, --help               Print help
 
 ----- stderr -----
