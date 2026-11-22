@@ -129,7 +129,12 @@ uv tool install zoll-lint
 На GitHub каждое нарушение становится аннотацией на своей строке:
 
 ```yaml
-- run: uvx --from zoll-lint zoll check --format github
+steps:
+  - uses: actions/checkout@v7
+    with:
+      persist-credentials: false
+  - uses: astral-sh/setup-uv@v10
+  - run: uvx --from zoll-lint zoll check --format github
 ```
 
 ## Лицензия

@@ -129,7 +129,12 @@ Windows.
 On GitHub, each violation becomes an annotation on its line:
 
 ```yaml
-- run: uvx --from zoll-lint zoll check --format github
+steps:
+  - uses: actions/checkout@v7
+    with:
+      persist-credentials: false
+  - uses: astral-sh/setup-uv@v10
+  - run: uvx --from zoll-lint zoll check --format github
 ```
 
 ## License
