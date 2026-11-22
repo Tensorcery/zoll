@@ -20,7 +20,6 @@ jobs:
     permissions:
       contents: write  # pushes the branch release/v<next>
       pull-requests: write  # opens its pull request
-      actions: write  # starts CI on that branch
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
