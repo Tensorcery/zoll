@@ -49,6 +49,7 @@ printf '%s\n' \
   '@coderabbitai summary' '' '## Changelog' "$section" \
   | gh pr create --base "$BASE" --head "release/v$version" --title "bump: v$version" --body-file -
 
-# A pull request GITHUB_TOKEN opens starts no workflow, and main requires
-# CI's checks: start it on the branch, which a token may do.
+# The pull_request run of a pull request GITHUB_TOKEN opens waits for a
+# maintainer's approval, and main requires CI's checks: start CI on the
+# branch, which the token may do without one.
 gh workflow run ci.yml --ref "release/v$version"

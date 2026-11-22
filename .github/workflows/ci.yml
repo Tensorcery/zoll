@@ -6,10 +6,12 @@ on:
   pull_request:
   push:
     branches: [main]
-  # The release pull request is opened by GITHUB_TOKEN, whose events start
-  # no workflow; prepare-release.sh starts this one on its branch instead.
-  # The commit messages job is skipped there, which a required check takes
-  # for a pass.
+  # The release pull request is opened by GITHUB_TOKEN: its pull_request run
+  # waits for a maintainer's approval. prepare-release.sh starts this one on
+  # its branch instead, which needs none; its check runs are GitHub Actions'
+  # on the same commit, which is what main's required checks ask for. The
+  # commit messages job is skipped there, which a required check takes for a
+  # pass.
   workflow_dispatch:
 
 # Nothing by default; a job asks for what it needs.

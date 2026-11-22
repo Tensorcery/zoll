@@ -98,9 +98,9 @@ over the PR's commits. Each is a check main requires.
 ## Releases
 
 `prepare release`, started by hand, bumps the version with commitizen on
-`release/v<next>`, opens its PR and starts CI on it: a PR that
-`GITHUB_TOKEN` opens starts no workflow. Its description becomes the
-release's.
+`release/v<next>`, opens its PR and starts CI on it by `workflow_dispatch`:
+the `pull_request` run of a PR that `GITHUB_TOKEN` opens waits for approval
+(approving it is the fallback). Its description becomes the release's.
 CodeRabbit writes the top of it, a summary for users of the changelog
 section, as `.coderabbit.yaml` asks; whatever stands there at the merge is
 published.
