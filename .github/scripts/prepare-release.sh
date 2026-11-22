@@ -4,9 +4,10 @@
 # Cargo.lock and CHANGELOG.md, in one commit. The tag is left to release.sh,
 # which makes it on the merge commit.
 #
-# The PR's description is the draft of the release's description: the
-# changelog section. What stands there at the merge is what release.sh
-# publishes.
+# The PR's description is the draft of the release's description: a line
+# that CodeRabbit replaces with its summary (.coderabbit.yaml says how to
+# write it), then the changelog section. What stands there at the merge is
+# what release.sh publishes.
 set -euo pipefail
 
 : "${BASE:?}" "${GH_TOKEN:?}" "${GITHUB_REF_NAME:?}" "${GITHUB_OUTPUT:?}"
@@ -45,5 +46,5 @@ section=$(awk -v head="## v$version" \
 
 printf '%s\n' \
   "<!-- This text becomes the description of the release v$version when the pull request is merged. Edit it here. -->" \
-  '## Changelog' "$section" \
+  '@coderabbitai summary' '' '## Changelog' "$section" \
   | gh pr create --base "$BASE" --head "release/v$version" --title "bump: v$version" --body-file -

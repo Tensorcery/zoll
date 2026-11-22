@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit reviews the pull requests and writes a summary into each
+# description, in place of the line `@coderabbitai summary`. For a release
+# pull request that summary is the draft of the release's description.
+# What it holds a change against is AGENTS.md, which it reads by itself.
+reviews:
+  high_level_summary: true
+  high_level_summary_instructions: >-
+    If the title of the pull request starts with "bump:", it is a release.
+    Write the description of that release for the people who use the
+    software, from the section that CHANGELOG.md gains: one or two sentences
+    on what the release is about, then the sections "New", "Fixed" and
+    "Changed", each only if it has entries, one short line per entry in
+    plain words. Leave out what a user does not notice (CI, tooling, tests,
+    refactoring) unless there is nothing else. State only what the changelog
+    says: no invented features, numbers or reasons. No title, at most 200
+    words.
+    For any other pull request: what changes and why, in a few lines.
