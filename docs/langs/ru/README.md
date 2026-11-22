@@ -130,19 +130,26 @@ zoll ставится как dev-зависимость, и hook, `make` и CI �
 же версию из `uv.lock`:
 
 ```bash
-uv add --dev zoll-lint
+uv add --dev zoll-lint pre-commit
+uv run pre-commit install
 ```
 
+`.pre-commit-config.yaml` в корне репозитория:
+
 ```yaml
-- repo: local
-  hooks:
-    - id: zoll
-      name: zoll
-      entry: uv run --locked zoll check
-      language: system
-      types: [file]
-      require_serial: true
+repos:
+  - repo: local
+    hooks:
+      - id: zoll
+        name: zoll
+        entry: uv run --locked zoll check --force-exclude
+        language: system
+        types: [file]
+        require_serial: true
 ```
+
+pre-commit передаёт каждый файл из коммита по имени; `--force-exclude`
+убирает те, что исключает `exclude` в конфиге.
 
 ## В CI
 
@@ -154,7 +161,7 @@ steps:
     with:
       persist-credentials: false
   - uses: astral-sh/setup-uv@v10
-  - run: uvx --from zoll-lint zoll check --format github
+  - run: uv run --locked zoll check --format github
 ```
 
 ## Лицензия

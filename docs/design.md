@@ -469,7 +469,8 @@ zoll languages
 ```
 
 A file named in `PATHS` is checked even when `include` or `exclude` would
-leave it out, as ruff does. `include`, `exclude` and the `languages` table
+leave it out, as ruff does; `--force-exclude` makes `exclude` leave it out
+too, as ruff's does, for a pre-commit hook, which names every staged file. `include`, `exclude` and the `languages` table
 are globs from the config's directory; `*` stays inside a directory and
 `**` crosses them, and a `languages` glob without a `/` matches the file
 name wherever the file is.

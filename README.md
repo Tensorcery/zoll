@@ -130,19 +130,26 @@ zoll is a dev dependency, so the hook, `make` and CI run the one version
 `uv.lock` holds:
 
 ```bash
-uv add --dev zoll-lint
+uv add --dev zoll-lint pre-commit
+uv run pre-commit install
 ```
 
+`.pre-commit-config.yaml`, at the repository's root:
+
 ```yaml
-- repo: local
-  hooks:
-    - id: zoll
-      name: zoll
-      entry: uv run --locked zoll check
-      language: system
-      types: [file]
-      require_serial: true
+repos:
+  - repo: local
+    hooks:
+      - id: zoll
+        name: zoll
+        entry: uv run --locked zoll check --force-exclude
+        language: system
+        types: [file]
+        require_serial: true
 ```
+
+pre-commit names every staged file; `--force-exclude` leaves out those the
+config's `exclude` does.
 
 ## In CI
 
@@ -154,7 +161,7 @@ steps:
     with:
       persist-credentials: false
   - uses: astral-sh/setup-uv@v10
-  - run: uvx --from zoll-lint zoll check --format github
+  - run: uv run --locked zoll check --format github
 ```
 
 ## License
