@@ -48,6 +48,7 @@ language → every violation mapped back to `file:line:col` of the real file
 | `docs/design.md` | the decisions, and the public input model (section 8) |
 | `docs/plan.md` | the stages of v1 and their checkpoints; a ticked box is done |
 | `docs/langs/ru/` | the Russian README |
+| `docs/assets/` | the logo and the README's demo, linked by their raw GitHub URL so PyPI shows them too |
 
 Extending zoll is meant to be data more than Rust: an embedding is a query.
 A test is a short Rust function over files written inline (`Repo::new` in
