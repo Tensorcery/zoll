@@ -184,12 +184,12 @@ fixed, with a test.
 
 ## 9. Release
 
-- [ ] a CI workflow runs `make lint` and `make test` on every PR
-- [ ] wheels built by `maturin-action` for Linux (x86_64, aarch64), macOS
+- [x] a CI workflow runs `make lint` and `make test` on every PR
+- [x] wheels built by `maturin-action` for Linux (x86_64, aarch64), macOS
       (x86_64, arm64) and Windows
-- [ ] the release workflow publishes to PyPI by Trusted Publishing
+- [x] the release workflow publishes to PyPI by Trusted Publishing
 - [ ] a pre-commit hook definition (`.pre-commit-hooks.yaml`) for users
-- [ ] the README's interface is true: the design status banner goes
+- [x] the README's interface is true: the design status banner goes
 - [ ] CI runs a corpus of real conftest policies through OPA and zoll and
       compares (design.md, section 13)
 - [ ] a Regal capabilities file without regorus' missing builtins is

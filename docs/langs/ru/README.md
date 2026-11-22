@@ -1,8 +1,19 @@
-# zoll
+<div align="center">
 
-[English](../../../README.md)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Tensorcery/zoll/main/docs/assets/logo-dark.svg">
+  <img alt="zoll" src="https://raw.githubusercontent.com/Tensorcery/zoll/main/docs/assets/logo-light.svg" width="280">
+</picture>
 
-Движок политик для файлов на любом языке, в стиле conftest.
+**Политики на Rego для каждого файла в репозитории и для кода, спрятанного внутри.**
+
+[![PyPI](https://img.shields.io/pypi/v/zoll-lint?color=F5B700&labelColor=1B1F2A)](https://pypi.org/project/zoll-lint/)
+[![CI](https://github.com/Tensorcery/zoll/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Tensorcery/zoll/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/Tensorcery/zoll?color=F5B700&labelColor=1B1F2A)](https://github.com/Tensorcery/zoll/blob/main/LICENSE)
+
+[English](https://github.com/Tensorcery/zoll/blob/main/README.md) | Русский
+
+</div>
 
 Код, спрятанный внутри другого кода, не читает никто, пока он не запустится:
 awk в строке shell, скрипт в YAML `run:`, строка `RUN` в Dockerfile,
@@ -11,13 +22,25 @@ awk в строке shell, скрипт в YAML `run:`, строка `RUN` в Do
 документ, код — в синтаксическое дерево), находит встроенный в него код и
 прогоняет по всему этому твои политики на Rego.
 
-> **Статус: работает, не выпущен.** Ниже — согласованный интерфейс
-> ([docs/design.md](../../design.md)), он строится по этапам. Пока он прогоняет
-> политики Rego по YAML, JSON и TOML, как conftest, по дереву tree-sitter
-> для кода и по коду, встроенному в те и другие; нарушения можно
-> подавить комментарием или по glob, политики берутся из git с фиксацией
-> версий, а отчёт бывает текстом, JSON, аннотациями GitHub и SARIF. Релиз —
-> следующий шаг.
+<p align="center">
+  <img alt="zoll check находит curl, переданный в shell, на его строке в шаге run: workflow" src="https://raw.githubusercontent.com/Tensorcery/zoll/main/docs/assets/demo.svg" width="640">
+</p>
+
+## Главное
+
+- **50 языков за один прогон.** Форматы данных превращаются в тот же
+  документ, что дал бы политике conftest; код — в дерево tree-sitter.
+- **Код внутри кода.** Bash в `run:` у workflow, awk в этом bash, скрипт
+  в блоке Markdown: каждый проверяется как отдельный файл, на любой
+  глубине, и показывается на своей строке в настоящем файле.
+- **Политики conftest работают как есть.** YAML, JSON и TOML дают те же
+  документы, что и в conftest; `package main` привязывается к своему языку
+  одной строкой конфига.
+- **Политики из git, с фиксацией.** Набор политик в своём репозитории
+  закрепляется на коммите в `zoll.lock`.
+- **Отчёты для людей и для машин:** текст, JSON, аннотации GitHub, SARIF.
+- **Один бинарник, без OPA.** Rego вычисляется внутри процесса; в колесе
+  есть всё.
 
 ## Как это работает
 
@@ -41,10 +64,12 @@ awk в строке shell, скрипт в YAML `run:`, строка `RUN` в Do
 
 ## Политика
 
+`policy/bash.rego`, находится вообще без конфига:
+
 ```rego
 package bash
 
-# Пайп в shell скачивает и запускает код, который никто не смотрел.
+# A pipe into a shell downloads and runs code nobody reviewed.
 deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
 	walk(input, [_, node])
 	node.type == "pipeline"
@@ -54,16 +79,8 @@ deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
 }
 ```
 
-```
-$ zoll check
-error[bash.curl_pipe]: curl piped into a shell
-  --> .github/workflows/ci.yml:14:11
-   |
-14 |           curl -fsSL https://example.com/install.sh | sh
-   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-1 violation
-```
+Она находит пайп в `run:` у workflow, как на картинке выше: bash там для
+неё отдельный файл.
 
 `zoll inspect ФАЙЛ` печатает JSON, который увидит политика для этого файла и
 каждого фрагмента в нём, чтобы правило писалось по настоящей форме.
@@ -76,7 +93,7 @@ error[bash.curl_pipe]: curl piped into a shell
 [tool.zoll]
 policies = [
   "policy/",
-  "git+https://github.com/Tensorcery/zoll-policies//embedded-code@v1.0.0",
+  "git+https://github.com/my-org/policies//embedded-code@v1.0.0",
 ]
 data = ["policy/data/"]
 ```
@@ -101,8 +118,21 @@ curl -fsSL https://example.com/install.sh | sh  # zoll: ignore[bash.curl_pipe]
 ## Установка
 
 ```bash
-uv tool install zoll-lint          # 50 популярных языков
-uv tool install 'zoll-lint[full]'  # все остальные грамматики zoll
+uv tool install zoll-lint
 ```
 
-Команда — `zoll`; имя `zoll` на PyPI занято похожим проектом.
+Команда — `zoll`; имя `zoll` на PyPI занято похожим проектом. Колёса
+собираются для Linux (x86_64, aarch64), macOS (x86_64, arm64) и Windows.
+
+## В CI
+
+На GitHub каждое нарушение становится аннотацией на своей строке:
+
+```yaml
+- run: uvx --from zoll-lint zoll check --format github
+```
+
+## Лицензия
+
+[MIT](https://github.com/Tensorcery/zoll/blob/main/LICENSE). Грамматики и
+крейты, собранные в бинарник, остаются под своими лицензиями.
