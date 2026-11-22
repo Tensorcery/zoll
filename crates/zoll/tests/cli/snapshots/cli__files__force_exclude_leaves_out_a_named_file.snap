@@ -1,0 +1,17 @@
+---
+source: crates/zoll/tests/cli/files.rs
+info:
+  program: zoll
+  args:
+    - check
+    - "--show-files"
+    - "--force-exclude"
+    - a.yml
+    - vendor/d.yml
+---
+success: true
+exit_code: 0
+----- stdout -----
+yaml       a.yml
+
+----- stderr -----

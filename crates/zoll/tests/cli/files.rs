@@ -173,6 +173,24 @@ fn paths_given() -> TestResult {
 }
 
 #[test]
+fn force_exclude_leaves_out_a_named_file() -> TestResult {
+    let repo = Repo::new(&[
+        ("zoll.toml", "exclude = [\"vendor/**\"]\n"),
+        ("a.yml", ""),
+        ("vendor/d.yml", ""),
+    ])?;
+    // What a pre-commit hook does: name each staged file.
+    assert_cmd_snapshot!(repo.zoll("").args([
+        "check",
+        "--show-files",
+        "--force-exclude",
+        "a.yml",
+        "vendor/d.yml"
+    ]));
+    Ok(())
+}
+
+#[test]
 fn path_that_does_not_exist() -> TestResult {
     let repo = Repo::new(&[])?;
     repo.settings()?.bind(|| {
