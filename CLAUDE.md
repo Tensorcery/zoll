@@ -98,9 +98,12 @@ over the PR's commits. Each is a check main requires.
 ## Releases
 
 `prepare release`, started by hand, bumps the version with commitizen on
-`release/v<next>`, opens its PR and starts CI on it by `workflow_dispatch`:
-the `pull_request` run of a PR that `GITHUB_TOKEN` opens waits for approval
-(approving it is the fallback). Its description becomes the release's.
+`release/v<next>` and opens its PR. The PR is `GITHUB_TOKEN`'s, so its
+`pull_request` CI run waits for a maintainer's approval: "Approve and run"
+on the PR, or `gh api -X POST repos/Tensorcery/zoll/actions/runs/<id>/approve`;
+closing and reopening the PR starts a run too. No other event counts: a
+`workflow_dispatch` run's checks do not satisfy main's required checks.
+Its description becomes the release's.
 CodeRabbit writes the top of it, a summary for users of the changelog
 section, as `.coderabbit.yaml` asks; whatever stands there at the merge is
 published.
