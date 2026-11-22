@@ -2054,7 +2054,7 @@ checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 
 [[package]]
 name = "zoll"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "annotate-snippets",
  "anstream",
@@ -2070,7 +2070,7 @@ dependencies = [
 
 [[package]]
 name = "zoll_core"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "globset",
  "ignore",
@@ -2129,7 +2129,7 @@ dependencies = [
 
 [[package]]
 name = "zoll_grammars"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "cc",
  "tree-sitter-language",
