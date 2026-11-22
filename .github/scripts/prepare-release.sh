@@ -48,3 +48,7 @@ printf '%s\n' \
   "<!-- This text becomes the description of the release v$version when the pull request is merged. Edit it here. -->" \
   '@coderabbitai summary' '' '## Changelog' "$section" \
   | gh pr create --base "$BASE" --head "release/v$version" --title "bump: v$version" --body-file -
+
+# A pull request GITHUB_TOKEN opens starts no workflow, and main requires
+# CI's checks: start it on the branch, which a token may do.
+gh workflow run ci.yml --ref "release/v$version"
