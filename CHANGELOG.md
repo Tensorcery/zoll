@@ -1,3 +1,10 @@
+## v0.2.0 (2026-11-22)
+
+### Features
+
+- --force-exclude, and pre-commit with the zoll uv.lock pins (#9)
+- --force-exclude leaves out named files the config excludes
+
 ## v0.1.0 (2026-11-22)
 
 ### Features
