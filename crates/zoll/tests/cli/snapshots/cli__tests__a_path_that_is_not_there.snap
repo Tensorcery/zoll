@@ -1,0 +1,14 @@
+---
+source: crates/zoll/tests/cli/tests.rs
+info:
+  program: zoll
+  args:
+    - test
+    - policy/nothing
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: policy/nothing: No such file or directory (os error 2)

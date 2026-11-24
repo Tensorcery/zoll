@@ -85,6 +85,9 @@ bash there is a file of its own to it.
 `zoll inspect FILE` prints the JSON a policy sees for that file and every
 fragment in it, so a rule is written against the real shape.
 
+`zoll test` runs the policies' tests - every rule named `test_*`, as `opa
+test` and `conftest verify` run them - on the engine `zoll check` uses.
+
 ## Configuration
 
 `zoll.toml`, `.zoll.toml`, or `[tool.zoll]` in `pyproject.toml`:

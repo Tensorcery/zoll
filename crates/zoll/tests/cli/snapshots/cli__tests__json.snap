@@ -1,0 +1,40 @@
+---
+source: crates/zoll/tests/cli/tests.rs
+info:
+  program: zoll
+  args:
+    - test
+    - "--format"
+    - json
+---
+success: false
+exit_code: 1
+----- stdout -----
+[
+  {
+    "error": null,
+    "line": 3,
+    "package": "main",
+    "path": "policy/replicas_test.rego",
+    "result": "pass",
+    "rule": "test_one_replica_is_refused"
+  },
+  {
+    "error": null,
+    "line": 7,
+    "package": "main",
+    "path": "policy/replicas_test.rego",
+    "result": "pass",
+    "rule": "test_two_pass"
+  },
+  {
+    "error": null,
+    "line": 11,
+    "package": "main",
+    "path": "policy/replicas_test.rego",
+    "result": "fail",
+    "rule": "test_data_is_seen"
+  }
+]
+
+----- stderr -----

@@ -1,0 +1,13 @@
+---
+source: crates/zoll/tests/cli/tests.rs
+info:
+  program: zoll
+  args:
+    - test
+---
+success: true
+exit_code: 0
+----- stdout -----
+2 tests passed
+
+----- stderr -----

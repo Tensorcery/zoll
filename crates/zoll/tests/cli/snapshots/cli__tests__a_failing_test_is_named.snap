@@ -1,0 +1,14 @@
+---
+source: crates/zoll/tests/cli/tests.rs
+info:
+  program: zoll
+  args:
+    - test
+---
+success: false
+exit_code: 1
+----- stdout -----
+FAIL main.test_data_is_seen  policy/replicas_test.rego:11
+3 tests, 1 failed
+
+----- stderr -----

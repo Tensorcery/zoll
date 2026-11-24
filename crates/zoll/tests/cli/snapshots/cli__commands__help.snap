@@ -14,6 +14,7 @@ Usage: zoll [OPTIONS] <COMMAND>
 
 Commands:
   check      Check files against the policies
+  test       Run the policies' tests: each rule named `test_*`
   inspect    Print the input a policy sees for a file and for each fragment in it
   lock       Pin each git policy source to its commit in `zoll.lock`
   languages  List the languages zoll parses

@@ -193,6 +193,8 @@ fixed, with a test.
       (`.pre-commit-hooks.yaml`, a `rev:` per release) waits until someone
       asks for it: its `rev:` is a second copy of the version
 - [x] the README's interface is true: the design status banner goes
+- [x] `zoll test` runs the policies' tests, so a repository moving from
+      conftest drops `conftest verify` too
 - [ ] CI runs a corpus of real conftest policies through OPA and zoll and
       compares (design.md, section 13)
 - [ ] a Regal capabilities file without regorus' missing builtins is
@@ -205,4 +207,4 @@ fixed, with a test.
 
 `zoll-lint[full]` (grammars as shared libraries), user injections in the
 config, `--combine` for rules over several files, conftest documents for
-Dockerfile, HCL and XML, `zoll test` for policy tests.
+Dockerfile, HCL and XML.

@@ -85,6 +85,10 @@ deny_curl_pipe contains {"msg": "curl piped into a shell", "at": node} if {
 `zoll inspect ФАЙЛ` печатает JSON, который увидит политика для этого файла и
 каждого фрагмента в нём, чтобы правило писалось по настоящей форме.
 
+`zoll test` прогоняет тесты политик — каждое правило `test_*`, как их
+прогоняют `opa test` и `conftest verify`, — на том же движке, что и `zoll
+check`.
+
 ## Конфигурация
 
 `zoll.toml`, `.zoll.toml` или `[tool.zoll]` в `pyproject.toml`:

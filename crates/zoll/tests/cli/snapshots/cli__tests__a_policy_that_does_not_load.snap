@@ -1,0 +1,17 @@
+---
+source: crates/zoll/tests/cli/tests.rs
+info:
+  program: zoll
+  args:
+    - test
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: expecting expression
+ --> policy/replicas_test.rego:3:13
+  |
+3 | test_x if {
+  |            ^
