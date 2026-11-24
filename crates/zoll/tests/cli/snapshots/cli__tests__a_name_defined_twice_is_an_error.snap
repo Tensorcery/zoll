@@ -1,0 +1,16 @@
+---
+source: crates/zoll/tests/cli/tests.rs
+info:
+  program: zoll
+  args:
+    - test
+---
+success: false
+exit_code: 2
+----- stdout -----
+ERROR main.test_dup  policy/replicas_test.rego:3
+`test_dup` is defined 2 times; OPA runs each definition as a test of its own, and zoll cannot: give each a name of its own
+1 test, 1 failed
+
+----- stderr -----
+error: 1 test failed to evaluate

@@ -1,0 +1,20 @@
+---
+source: crates/zoll/tests/cli/tests.rs
+info:
+  program: zoll
+  args:
+    - test
+---
+success: false
+exit_code: 2
+----- stdout -----
+ERROR main.test_divides  policy/replicas_test.rego:11
+--> policy/replicas_test.rego:12:12
+   |
+12 | 	x := 1 / 0
+   |            ^
+error: divide by zero
+3 tests, 1 failed
+
+----- stderr -----
+error: 1 test failed to evaluate

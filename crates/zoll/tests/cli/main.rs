@@ -11,6 +11,7 @@ mod git;
 mod inspect;
 mod policies;
 mod suppress;
+mod tests;
 
 use insta_cmd::get_cargo_bin;
 use std::error::Error;
