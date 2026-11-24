@@ -463,6 +463,9 @@ zoll check [PATHS...]       default: the current directory
 
 zoll check -                the standard input, read as YAML, as conftest reads
                             it: `helm template . | zoll check -`
+zoll test [PATHS...]        the policies' tests, as `opa test` runs them;
+                            PATHS: only the tests in these files
+  --format text|json
 zoll inspect FILE           input and data of the file and of each fragment
 zoll lock [--upgrade]
 zoll languages
@@ -481,8 +484,22 @@ name wherever the file is.
 Exit codes: `0` no violation, `1` violations, `2` zoll itself failed
 (config, network, a policy that does not load).
 
-Later: `zoll test` for policy tests (`*_test.rego`), user injections in the
-config.
+`zoll test` runs every rule named `test_*` in the configured policies,
+`*_test.rego` files and git sources included, on the engine `zoll check`
+uses: no input, the config's data, `with input as ...` and `with data.x as
+...` as in OPA. A test passes when it is `true`, as in OPA: undefined,
+`false`, a string or a number fail. A name defined twice in a package is an
+error: OPA runs each definition as a test of its own, and regorus evaluates
+the rule they make together. `zoll test PATHS` runs only the tests in those
+files and directories; every policy is still loaded, as a test reads rules
+from other files. The text report names each test that failed, at its file
+and line, then a count; `--format json` gives every test as `{"package",
+"rule", "path", "line", "result", "error"}`, `result` being `pass`, `fail`
+or `error`. Exit codes: `0` all pass, `1` a test failed, `2` a test failed
+to evaluate, or zoll itself failed; `conftest verify` counts a test that
+errors as failed. A conftest repository drops `conftest verify` for it.
+
+Later: user injections in the config.
 
 ## 12. Output
 
