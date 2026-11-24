@@ -13,9 +13,9 @@ use serde_json::{Value, json};
 use zoll_core::check::{Checked, Found};
 use zoll_core::config::FailOn;
 use zoll_core::document::Place;
-use zoll_core::policy::Severity;
+use zoll_core::policy::{Outcome, Severity, Test};
 
-use crate::{Format, shown};
+use crate::{Format, TestFormat, shown};
 
 /// Writes the report; `true` when what was found fails the run.
 pub(crate) fn write(
@@ -260,4 +260,60 @@ fn uri(path: &str) -> String {
         }
     }
     uri
+}
+
+/// The tests' report: in text, each test that did not pass, at its file and
+/// line, then a count; in JSON, every test.
+pub(crate) fn tests(
+    format: TestFormat,
+    tests: &[Test],
+    root: &Path,
+    cwd: &Path,
+    out: &mut impl Write,
+) -> io::Result<()> {
+    let path = |test: &Test| shown(&root.join(&test.file), cwd);
+    if let TestFormat::Json = format {
+        let all: Vec<Value> = tests
+            .iter()
+            .map(|test| {
+                let (result, error) = match &test.outcome {
+                    Outcome::Pass => ("pass", None),
+                    Outcome::Fail => ("fail", None),
+                    Outcome::Error(e) => ("error", Some(e.trim())),
+                };
+                json!({
+                    "package": test.package,
+                    "rule": test.name,
+                    "path": path(test),
+                    "line": test.line,
+                    "result": result,
+                    "error": error,
+                })
+            })
+            .collect();
+        serde_json::to_writer_pretty(&mut *out, &all)?;
+        return writeln!(out);
+    }
+    for test in tests {
+        let id = format!("{}.{}", test.package, test.name);
+        match &test.outcome {
+            Outcome::Pass => {}
+            Outcome::Fail => writeln!(out, "FAIL {id}  {}:{}", path(test), test.line)?,
+            Outcome::Error(e) => writeln!(
+                out,
+                "ERROR {id}  {}:{}\n{}",
+                path(test),
+                test.line,
+                e.trim()
+            )?,
+        }
+    }
+    let failed = tests.iter().filter(|t| t.outcome != Outcome::Pass).count();
+    match (tests.len(), failed) {
+        (0, _) => writeln!(out, "no tests"),
+        (1, 0) => writeln!(out, "1 test passed"),
+        (n, 0) => writeln!(out, "{n} tests passed"),
+        (1, _) => writeln!(out, "1 test, 1 failed"),
+        (n, failed) => writeln!(out, "{n} tests, {failed} failed"),
+    }
 }

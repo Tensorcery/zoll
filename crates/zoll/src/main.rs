@@ -14,7 +14,7 @@ use clap::{ColorChoice, Parser, Subcommand, ValueEnum};
 use zoll_core::config::FailOn;
 use zoll_core::git::{self, Mode};
 use zoll_core::language::{self, LANGUAGES, Languages};
-use zoll_core::policy::Policies;
+use zoll_core::policy::{Outcome, Policies};
 use zoll_core::suppress::PerFile;
 use zoll_core::{Error, SourceError, check, config, input, walk};
 
@@ -79,6 +79,15 @@ enum Command {
         #[arg(long)]
         force_exclude: bool,
     },
+    /// Run the policies' tests: each rule named `test_*`.
+    Test {
+        /// Run only the tests in these files and directories.
+        paths: Vec<PathBuf>,
+
+        /// How the results are printed.
+        #[arg(long, value_enum, default_value_t = TestFormat::Text)]
+        format: TestFormat,
+    },
     /// Print the input a policy sees for a file and for each fragment in it.
     Inspect {
         /// The file.
@@ -100,6 +109,12 @@ enum Format {
     Json,
     Github,
     Sarif,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum TestFormat {
+    Text,
+    Json,
 }
 
 /// Exit code 1: violations that fail the run.
@@ -210,6 +225,7 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
             };
             report::write(*format, &checked, cwd, fail_on, out).map_err(stdout)
         }
+        Command::Test { paths, format } => test(cli.config.as_deref(), cwd, paths, *format, out),
         Command::Inspect { file } => {
             let loaded = load_config(cli.config.as_deref(), cwd)?;
             let languages = Languages::new(&loaded.config.languages)?;
@@ -251,6 +267,41 @@ fn run(cli: &Cli, cwd: &Path, out: &mut impl Write) -> Result<bool, Error> {
             Ok(false)
         }
     }
+}
+
+/// `zoll test`; `true` when a test failed.
+fn test(
+    config: Option<&Path>,
+    cwd: &Path,
+    paths: &[PathBuf],
+    format: TestFormat,
+    out: &mut impl Write,
+) -> Result<bool, Error> {
+    let loaded = load_config(config, cwd)?;
+    let mut only = Vec::new();
+    for path in paths {
+        // A path that is not there would run no test, and pass.
+        let path = walk::clean(&cwd.join(path));
+        std::fs::metadata(&path).map_err(|e| Error::Io(path.clone(), e))?;
+        only.push(path);
+    }
+    let git = git::resolve(&loaded.root, &loaded.config.policies, Mode::Check)?;
+    let policies = Policies::load(&loaded.root, &loaded.config, &git.dirs)?;
+    // Every policy is loaded, as a test reads rules from other files.
+    let tests = policies.test(|file| {
+        let file = walk::clean(&loaded.root.join(file));
+        only.is_empty() || only.iter().any(|path| file.starts_with(path))
+    });
+    report::tests(format, &tests, &loaded.root, cwd, out).map_err(stdout)?;
+    let errors = tests
+        .iter()
+        .filter(|t| matches!(t.outcome, Outcome::Error(_)))
+        .count();
+    if errors > 0 {
+        let what = if errors == 1 { "test" } else { "tests" };
+        return Err(Error::Other(format!("{errors} {what} failed to evaluate")));
+    }
+    Ok(tests.iter().any(|t| t.outcome == Outcome::Fail))
 }
 
 fn stdout(error: io::Error) -> Error {
