@@ -207,6 +207,99 @@ impl Policies {
         }
         Ok(found)
     }
+
+    /// The policies' tests, each run: every rule named `test_*`, as `opa
+    /// test` and `conftest verify` find them, with no input and the
+    /// config's data. Only the tests in a file `wanted` takes, by its path
+    /// from the config's directory, run; the others are left out.
+    #[must_use]
+    pub fn test(&self, wanted: impl Fn(&str) -> bool) -> Vec<Test> {
+        let mut engine = self.engine.clone();
+        // Every definition of a test, by package and name, with its place.
+        let mut defined: Vec<(String, String, String, u32)> = Vec::new();
+        for module in engine.get_modules() {
+            let package = module.package.refr.span().text();
+            for rule in &module.policy {
+                let Rule::Spec {
+                    head: RuleHead::Compr { refr, .. },
+                    span,
+                    ..
+                } = &**rule
+                else {
+                    continue;
+                };
+                let name = refr.span().text();
+                if name.starts_with("test_") {
+                    let file = span.source.file().clone();
+                    defined.push((package.to_owned(), name.to_owned(), file, span.line));
+                }
+            }
+        }
+        let mut tests: Vec<Test> = Vec::new();
+        for (package, name, file, line) in &defined {
+            if !wanted(file)
+                || tests
+                    .iter()
+                    .any(|t| t.package == *package && t.name == *name)
+            {
+                continue;
+            }
+            let times = defined
+                .iter()
+                .filter(|(p, n, _, _)| p == package && n == name)
+                .count();
+            let outcome = if times > 1 {
+                // OPA runs each definition as a test of its own; regorus
+                // evaluates the rule they make together.
+                Outcome::Error(format!(
+                    "`{name}` is defined {times} times; OPA runs each definition as a test \
+                     of its own, and zoll cannot: give each a name of its own"
+                ))
+            } else {
+                match engine.eval_rule(format!("data.{package}.{name}")) {
+                    // Only true passes, as in OPA: false, undefined, a
+                    // string or a number fail.
+                    Ok(regorus::Value::Bool(true)) => Outcome::Pass,
+                    Ok(_) => Outcome::Fail,
+                    Err(e) => Outcome::Error(e.to_string()),
+                }
+            };
+            tests.push(Test {
+                package: package.clone(),
+                name: name.clone(),
+                file: file.clone(),
+                line: *line,
+                outcome,
+            });
+        }
+        tests
+    }
+}
+
+/// A policy test and how it ran.
+#[derive(Debug)]
+pub struct Test {
+    /// Its package: `main`.
+    pub package: String,
+    /// The rule: `test_two_replicas_pass`.
+    pub name: String,
+    /// Its file, from the config's directory.
+    pub file: String,
+    /// Its line, from 1.
+    pub line: u32,
+    /// How it ran.
+    pub outcome: Outcome,
+}
+
+/// How a test ran.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Outcome {
+    /// It is true.
+    Pass,
+    /// It is anything but true: undefined, false, a string.
+    Fail,
+    /// It failed to evaluate: the error.
+    Error(String),
 }
 
 /// regorus's error for a policy that does not compile, which reads
